@@ -5,11 +5,8 @@ echo "============================================="
 echo "   ⚡ Installing RirDrop on Linux"
 echo "============================================="
 
-# Determine source directory (where this script is located)
+# Determine source directory or tarball
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_SRC_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# Target installation paths
 INSTALL_DIR="$HOME/.local/share/rirdrop"
 BIN_DIR="$HOME/.local/bin"
 DESKTOP_DIR="$HOME/.local/share/applications"
@@ -23,13 +20,37 @@ mkdir -p "$DESKTOP_DIR"
 mkdir -p "$ICON_DIR"
 mkdir -p "$PIXMAPS_DIR"
 
-echo "📂 Copying RirDrop files to $INSTALL_DIR..."
-# Copy source files (excluding git, tests, scratch)
-cp -r "$APP_SRC_DIR/src" "$INSTALL_DIR/"
-cp -r "$APP_SRC_DIR/assets" "$INSTALL_DIR/"
-cp -r "$APP_SRC_DIR/scripts" "$INSTALL_DIR/"
-cp -r "$APP_SRC_DIR/node_modules" "$INSTALL_DIR/"
-cp "$APP_SRC_DIR/package.json" "$INSTALL_DIR/"
+# Resolve where the application files come from
+if [ -d "$SCRIPT_DIR/src" ]; then
+    APP_SRC_DIR="$SCRIPT_DIR"
+elif [ -d "$SCRIPT_DIR/../src" ]; then
+    APP_SRC_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    # Look for a tar.gz bundle in the same directory
+    TARBALL="$(find "$SCRIPT_DIR" -maxdepth 1 -name "RirDrop-linux-x64*.tar.gz" | head -n 1)"
+    if [ -n "$TARBALL" ] && [ -f "$TARBALL" ]; then
+        echo "📦 Found archive: $(basename "$TARBALL")"
+        echo "📂 Extracting files to $HOME/.local/share/..."
+        tar -xzf "$TARBALL" -C "$HOME/.local/share/"
+        APP_SRC_DIR="$INSTALL_DIR"
+    else
+        echo "❌ Error: Could not locate RirDrop source files or tar.gz archive in $SCRIPT_DIR" >&2
+        exit 1
+    fi
+fi
+
+if [ "$APP_SRC_DIR" != "$INSTALL_DIR" ]; then
+    echo "📂 Copying RirDrop files to $INSTALL_DIR..."
+    cp -r "$APP_SRC_DIR/src" "$INSTALL_DIR/"
+    cp -r "$APP_SRC_DIR/assets" "$INSTALL_DIR/"
+    [ -d "$APP_SRC_DIR/scripts" ] && cp -r "$APP_SRC_DIR/scripts" "$INSTALL_DIR/"
+    [ -f "$APP_SRC_DIR/install.sh" ] && cp "$APP_SRC_DIR/install.sh" "$INSTALL_DIR/"
+    [ -f "$APP_SRC_DIR/uninstall.sh" ] && cp "$APP_SRC_DIR/uninstall.sh" "$INSTALL_DIR/"
+    cp -r "$APP_SRC_DIR/node_modules" "$INSTALL_DIR/"
+    cp "$APP_SRC_DIR/package.json" "$INSTALL_DIR/"
+else
+    echo "✅ Files verified in $INSTALL_DIR"
+fi
 
 # Copy icon
 echo "🎨 Registering app icons..."
