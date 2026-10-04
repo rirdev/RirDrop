@@ -10,40 +10,51 @@ const https = require('https');
 const http = require('http');
 const { execFile } = require('child_process');
 const dns = require('dns');
+const { getLocalIpAddresses } = require('./networkUtils');
 
 function getPrimaryInterface() {
-  try {
-    // Attempt 1: check /proc/net/route for default gateway destination (00000000)
-    if (fs.existsSync('/proc/net/route')) {
-      const routeContent = fs.readFileSync('/proc/net/route', 'utf8');
-      const lines = routeContent.trim().split('\n');
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].trim().split(/\s+/);
-        if (parts[1] === '00000000') {
-          return parts[0];
+  if (process.platform === 'linux') {
+    try {
+      // Attempt 1: check /proc/net/route for default gateway destination (00000000)
+      if (fs.existsSync('/proc/net/route')) {
+        const routeContent = fs.readFileSync('/proc/net/route', 'utf8');
+        const lines = routeContent.trim().split('\n');
+        for (let i = 1; i < lines.length; i++) {
+          const parts = lines[i].trim().split(/\s+/);
+          if (parts[1] === '00000000') {
+            return parts[0];
+          }
         }
       }
+    } catch (_) {}
+
+    // Attempt 2: Pick first non-loopback active interface from /proc/net/dev
+    try {
+      if (fs.existsSync('/proc/net/dev')) {
+        const devContent = fs.readFileSync('/proc/net/dev', 'utf8');
+        const lines = devContent.trim().split('\n');
+        for (let i = 2; i < lines.length; i++) {
+          const colonIdx = lines[i].indexOf(':');
+          if (colonIdx === -1) continue;
+          const iface = lines[i].substring(0, colonIdx).trim();
+          if (iface === 'lo' || iface.startsWith('docker') || iface.startsWith('br-') || iface.startsWith('veth')) {
+            continue;
+          }
+          return iface;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Cross-platform fallback (Windows, macOS, Linux)
+  try {
+    const addresses = getLocalIpAddresses();
+    if (addresses.length > 0) {
+      return addresses[0].interface;
     }
   } catch (_) {}
 
-  // Attempt 2: Pick first non-loopback active interface from /proc/net/dev
-  try {
-    if (fs.existsSync('/proc/net/dev')) {
-      const devContent = fs.readFileSync('/proc/net/dev', 'utf8');
-      const lines = devContent.trim().split('\n');
-      for (let i = 2; i < lines.length; i++) {
-        const colonIdx = lines[i].indexOf(':');
-        if (colonIdx === -1) continue;
-        const iface = lines[i].substring(0, colonIdx).trim();
-        if (iface === 'lo' || iface.startsWith('docker') || iface.startsWith('br-') || iface.startsWith('veth')) {
-          continue;
-        }
-        return iface;
-      }
-    }
-  } catch (_) {}
-
-  return null;
+  return 'Local Area';
 }
 
 function readProcNetDev(targetIface) {
@@ -71,28 +82,68 @@ function readProcNetDev(targetIface) {
   return { rxTotal, txTotal };
 }
 
+function readWindowsNetstat() {
+  return new Promise((resolve) => {
+    execFile('netstat', ['-e'], { timeout: 800, windowsHide: true }, (err, stdout) => {
+      if (!err && stdout) {
+        const match = stdout.match(/Bytes\s+(\d+)\s+(\d+)/i);
+        if (match) {
+          return resolve({
+            rxTotal: parseInt(match[1], 10) || 0,
+            txTotal: parseInt(match[2], 10) || 0
+          });
+        }
+      }
+      resolve({ rxTotal: 0, txTotal: 0 });
+    });
+  });
+}
+
+async function getNetworkBytes(targetIface) {
+  if (process.platform === 'linux') {
+    return readProcNetDev(targetIface);
+  }
+  if (process.platform === 'win32') {
+    return await readWindowsNetstat();
+  }
+  return { rxTotal: 0, txTotal: 0 };
+}
+
 function probeLatency(host = '1.1.1.1', timeoutSec = 1.2) {
   return new Promise((resolve) => {
-    execFile('ping', ['-c', '1', '-W', String(Math.ceil(timeoutSec)), host], { timeout: 2000 }, (err, stdout) => {
+    const isWin = process.platform === 'win32';
+    const pingArgs = isWin
+      ? ['-n', '1', '-w', String(Math.ceil(timeoutSec * 1000)), host]
+      : ['-c', '1', '-W', String(Math.ceil(timeoutSec)), host];
+
+    execFile('ping', pingArgs, { timeout: 2500, windowsHide: true }, (err, stdout) => {
       if (!err && stdout) {
-        const m = stdout.match(/time=([\d.]+)\s*ms/);
+        const m = stdout.match(/time[=<]\s*([\d.]+)\s*ms/i);
         if (m) {
           return resolve(parseFloat(m[1]));
         }
       }
-      // Fallback: fast TCP connect probe
+      // Fallback: fast TCP connect probe to 1.1.1.1 on port 443 then 53
       const start = Date.now();
       const net = require('net');
       const socket = new net.Socket();
       socket.setTimeout(1500);
-      socket.connect(53, '1.1.1.1', () => {
+      socket.connect(443, host, () => {
         const diff = Date.now() - start;
         socket.destroy();
         resolve(diff);
       });
       socket.on('error', () => {
         socket.destroy();
-        resolve(null);
+        const sock2 = new net.Socket();
+        sock2.setTimeout(1200);
+        sock2.connect(53, host, () => {
+          const diff = Date.now() - start;
+          sock2.destroy();
+          resolve(diff);
+        });
+        sock2.on('error', () => { sock2.destroy(); resolve(null); });
+        sock2.on('timeout', () => { sock2.destroy(); resolve(null); });
       });
       socket.on('timeout', () => {
         socket.destroy();
@@ -135,7 +186,7 @@ class LiveNetworkMonitor {
     this.lastPingTime = 0;
   }
 
-  start() {
+  async start() {
     if (this.isRunning) return;
     this.isRunning = true;
     this.isPaused = false;
@@ -144,7 +195,7 @@ class LiveNetworkMonitor {
       this.targetIface = getPrimaryInterface();
     }
 
-    const initial = readProcNetDev(this.targetIface);
+    const initial = await getNetworkBytes(this.targetIface);
     this.prevRx = initial.rxTotal;
     this.prevTx = initial.txTotal;
     this.prevTime = Date.now();
@@ -157,9 +208,9 @@ class LiveNetworkMonitor {
     this.isPaused = true;
   }
 
-  resume() {
+  async resume() {
     this.isPaused = false;
-    const current = readProcNetDev(this.targetIface);
+    const current = await getNetworkBytes(this.targetIface);
     this.prevRx = current.rxTotal;
     this.prevTx = current.txTotal;
     this.prevTime = Date.now();
@@ -180,7 +231,7 @@ class LiveNetworkMonitor {
     const dt = (now - this.prevTime) / 1000.0;
     if (dt <= 0) return;
 
-    const curr = readProcNetDev(this.targetIface);
+    const curr = await getNetworkBytes(this.targetIface);
     const rxDiff = Math.max(0, curr.rxTotal - this.prevRx);
     const txDiff = Math.max(0, curr.txTotal - this.prevTx);
 

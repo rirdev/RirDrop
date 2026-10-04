@@ -43,6 +43,9 @@
       "assets/**/*",
       "package.json"
     ],
+    "asarUnpack": [
+      "assets/bin/**/*"
+    ],
     "linux": {
       "target": [
         "AppImage",

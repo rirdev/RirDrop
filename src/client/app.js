@@ -3678,11 +3678,19 @@ async function refreshDownloaderPage() {
           downloaderEngineBadge.style.background = 'rgba(74, 222, 128, 0.15)';
           downloaderEngineBadge.style.color = 'var(--card-lime)';
           downloaderEngineBadge.style.borderColor = 'rgba(74, 222, 128, 0.3)';
+          if (btnUpdateDownloaderEngine) {
+            const span = btnUpdateDownloaderEngine.querySelector('span');
+            if (span) span.textContent = 'Update Engine';
+          }
         } else {
           downloaderEngineBadge.textContent = 'Engine Missing';
           downloaderEngineBadge.style.background = 'rgba(239, 68, 68, 0.15)';
           downloaderEngineBadge.style.color = '#ef4444';
           downloaderEngineBadge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+          if (btnUpdateDownloaderEngine) {
+            const span = btnUpdateDownloaderEngine.querySelector('span');
+            if (span) span.textContent = 'Install Engine';
+          }
         }
       }
     } catch (_) {}
@@ -3993,21 +4001,18 @@ if (btnOpenDownloadsFolder) {
 if (btnUpdateDownloaderEngine) {
   btnUpdateDownloaderEngine.addEventListener('click', async () => {
     btnUpdateDownloaderEngine.disabled = true;
-    btnUpdateDownloaderEngine.innerHTML = `<span class="spinner-small" style="display:inline-block; margin-right:4px;"></span> Updating...`;
+    btnUpdateDownloaderEngine.innerHTML = `<span class="spinner-small" style="display:inline-block; margin-right:4px;"></span> Downloading & Installing...`;
     try {
       if (window.rirdropAPI && window.rirdropAPI.downloaderUpdateEngine) {
         const res = await window.rirdropAPI.downloaderUpdateEngine();
-        showInfoModal('Engine Update', `<p>${res || 'yt-dlp engine updated successfully.'}</p>`);
+        showInfoModal('Media Engine', `<p>${res || 'yt-dlp engine is ready for use.'}</p>`);
       }
-      refreshDownloaderPage();
+      await refreshDownloaderPage();
     } catch (err) {
-      showInfoModal('Update Failed', `<p>${err.message}</p>`);
+      showInfoModal('Setup Failed', `<p>${err.message}</p>`);
     } finally {
       btnUpdateDownloaderEngine.disabled = false;
-      btnUpdateDownloaderEngine.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-        <span>Update Engine</span>
-      `;
+      await refreshDownloaderPage();
     }
   });
 }

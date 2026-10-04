@@ -18,11 +18,29 @@ function getLocalIpAddresses() {
     }
   }
 
-  // Prioritize typical LAN interfaces (wlan, eth, enp, wlp) over virtual/docker ones
+  // Prioritize genuine physical LAN interfaces over virtual/docker/WSL adapters
   addresses.sort((a, b) => {
-    const isPreferred = (name) => /^(wl|en|eth)/i.test(name);
-    if (isPreferred(a.interface) && !isPreferred(b.interface)) return -1;
-    if (!isPreferred(a.interface) && isPreferred(b.interface)) return 1;
+    const isVirtual = (name) => /(virtual|vmware|vbox|wsl|pseudo|hyper-v|tailscale|zerotier|docker|tap|tun|bridge)/i.test(name);
+    const isPhysical = (name) => /^(wi-?fi|wireless|ethernet|eth|en|wl|lan|local area)/i.test(name);
+
+    // De-prioritize virtual adapters (e.g. WSL, Hyper-V, VMware)
+    const aVirt = isVirtual(a.interface);
+    const bVirt = isVirtual(b.interface);
+    if (aVirt && !bVirt) return 1;
+    if (!aVirt && bVirt) return -1;
+
+    // Prioritize standard Wi-Fi and Ethernet
+    const aPhys = isPhysical(a.interface);
+    const bPhys = isPhysical(b.interface);
+    if (aPhys && !bPhys) return -1;
+    if (!aPhys && bPhys) return 1;
+
+    // Prioritize common private LAN subnets (192.168.x.x, 10.x.x.x) over APIPA (169.254.x.x)
+    const aLan = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(a.address);
+    const bLan = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(b.address);
+    if (aLan && !bLan) return -1;
+    if (!aLan && bLan) return 1;
+
     return 0;
   });
 

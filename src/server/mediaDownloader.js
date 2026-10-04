@@ -2,6 +2,7 @@ const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const https = require('https');
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';
@@ -68,7 +69,38 @@ class MediaDownloader {
     if (fs.existsSync(localYtdlp)) ytdlp = localYtdlp;
     if (fs.existsSync(localFfmpeg)) ffmpeg = localFfmpeg;
 
-    // 2. Check system PATH
+    // 2. Check bundled resources/assets in app (Windows and Linux builds)
+    if (!ytdlp) {
+      const candidates = [
+        path.join(process.resourcesPath || '', 'app.asar.unpacked', 'assets', 'bin', `yt-dlp${localExt}`),
+        path.join(__dirname, '..', '..', 'assets', 'bin', `yt-dlp${localExt}`),
+        path.join(process.resourcesPath || '', 'assets', 'bin', `yt-dlp${localExt}`),
+        path.join(path.dirname(process.execPath || ''), 'resources', 'app.asar.unpacked', 'assets', 'bin', `yt-dlp${localExt}`),
+        path.join(path.dirname(process.execPath || ''), 'assets', 'bin', `yt-dlp${localExt}`)
+      ];
+      for (const p of candidates) {
+        if (p && fs.existsSync(p)) {
+          ytdlp = p;
+          break;
+        }
+      }
+    }
+
+    if (!ffmpeg) {
+      const candidates = [
+        path.join(process.resourcesPath || '', 'app.asar.unpacked', 'assets', 'bin', `ffmpeg${localExt}`),
+        path.join(__dirname, '..', '..', 'assets', 'bin', `ffmpeg${localExt}`),
+        path.join(process.resourcesPath || '', 'assets', 'bin', `ffmpeg${localExt}`)
+      ];
+      for (const p of candidates) {
+        if (p && fs.existsSync(p)) {
+          ffmpeg = p;
+          break;
+        }
+      }
+    }
+
+    // 3. Check system PATH
     const systemCommands = process.platform === 'win32'
       ? ['where yt-dlp', 'where ffmpeg']
       : ['which yt-dlp', 'which ffmpeg'];
@@ -158,9 +190,18 @@ class MediaDownloader {
       throw new Error('URL must start with http:// or https://');
     }
 
-    const status = this.detectBinaries();
+    let status = this.detectBinaries();
     if (!status.available) {
-      throw new Error('yt-dlp engine was not found on your system. Please install yt-dlp or update engine in Settings.');
+      try {
+        console.log('[MediaDownloader] yt-dlp missing, attempting auto-download...');
+        await this.downloadAndInstallEngine();
+        status = this.detectBinaries();
+      } catch (dlErr) {
+        console.warn('[MediaDownloader] Auto-install attempt error:', dlErr.message);
+      }
+    }
+    if (!status.available) {
+      throw new Error('yt-dlp engine was not found on your system. Please click "Install Engine" on the Downloader page.');
     }
 
     const args = [
@@ -497,18 +538,116 @@ class MediaDownloader {
   }
 
   /**
-   * Run yt-dlp -U to keep extractors up to date
+   * Download and install yt-dlp binary from GitHub Releases
+   */
+  downloadAndInstallEngine(onProgress = () => {}) {
+    return new Promise((resolve, reject) => {
+      const ext = process.platform === 'win32' ? '.exe' : '';
+      const url = process.platform === 'win32'
+        ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
+        : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+
+      const destFile = path.join(this.appBinDir, `yt-dlp${ext}`);
+      const tmpFile = destFile + '.tmp';
+
+      if (!fs.existsSync(this.appBinDir)) {
+        fs.mkdirSync(this.appBinDir, { recursive: true });
+      }
+
+      const downloadFile = (targetUrl, redirectCount = 0) => {
+        if (redirectCount > 5) {
+          return reject(new Error('Too many redirects while downloading yt-dlp engine.'));
+        }
+
+        const req = https.get(targetUrl, { headers: { 'User-Agent': 'RirDrop-Downloader/1.0' } }, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            return downloadFile(res.headers.location, redirectCount + 1);
+          }
+
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Failed to download yt-dlp: HTTP ${res.statusCode}`));
+          }
+
+          const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+          let receivedBytes = 0;
+          const fileStream = fs.createWriteStream(tmpFile);
+
+          res.on('data', (chunk) => {
+            receivedBytes += chunk.length;
+            const pct = totalBytes > 0 ? Math.round((receivedBytes / totalBytes) * 100) : 0;
+            onProgress({
+              percent: pct,
+              receivedBytes,
+              totalBytes,
+              downloadedStr: formatBytes(receivedBytes),
+              totalStr: formatBytes(totalBytes)
+            });
+          });
+
+          res.pipe(fileStream);
+
+          fileStream.on('finish', () => {
+            fileStream.close(() => {
+              try {
+                if (fs.existsSync(destFile)) {
+                  fs.unlinkSync(destFile);
+                }
+                fs.renameSync(tmpFile, destFile);
+                if (process.platform !== 'win32') {
+                  fs.chmodSync(destFile, 0o755);
+                }
+                this.detectBinaries();
+                resolve({ success: true, path: destFile, version: this.binaries.version });
+              } catch (err) {
+                reject(err);
+              }
+            });
+          });
+
+          fileStream.on('error', (err) => {
+            try { fs.unlinkSync(tmpFile); } catch (_) {}
+            reject(err);
+          });
+        });
+
+        req.on('error', (err) => {
+          try { fs.unlinkSync(tmpFile); } catch (_) {}
+          reject(err);
+        });
+
+        req.setTimeout(60000, () => {
+          req.destroy(new Error('Download timed out after 60 seconds.'));
+        });
+      };
+
+      downloadFile(url);
+    });
+  }
+
+  /**
+   * Run yt-dlp -U to keep extractors up to date, or auto-install if missing
    */
   async updateEngine() {
     const status = this.detectBinaries();
     if (!status.available) {
-      throw new Error('yt-dlp is not installed.');
+      console.log('[MediaDownloader] Engine missing, installing newest release...');
+      await this.downloadAndInstallEngine();
+      this.detectBinaries();
+      return 'yt-dlp media engine installed successfully!';
     }
 
-    return new Promise((resolve, reject) => {
-      execFile(this.binaries.ytdlpPath, ['-U'], (err, stdout, stderr) => {
+    return new Promise((resolve) => {
+      execFile(this.binaries.ytdlpPath, ['-U'], async (err, stdout, stderr) => {
         if (err) {
-          return reject(new Error(stderr.trim() || stdout.trim() || err.message));
+          // If in-place update fails (e.g. read-only bundled binary), fallback to downloading new binary in appBinDir
+          try {
+            console.log('[MediaDownloader] yt-dlp -U failed, falling back to clean binary download...');
+            await this.downloadAndInstallEngine();
+            this.detectBinaries();
+            return resolve('Engine updated successfully to the latest release.');
+          } catch (dlErr) {
+            return resolve(stderr.trim() || stdout.trim() || err.message);
+          }
         }
         this.detectBinaries();
         resolve(stdout.trim() || 'Engine updated successfully.');

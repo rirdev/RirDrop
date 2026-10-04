@@ -73,6 +73,30 @@ class DiscoveryEngine {
         this.isRunning = true;
         console.log(`[Discovery] UDP listener running on port ${DISCOVERY_PORT}`);
 
+        // Start periodic broadcast announcement every 3.5 seconds
+        if (!this.broadcastTimer) {
+          this.broadcastTimer = setInterval(() => {
+            this.broadcast();
+          }, 3500);
+        }
+
+        // Prune stale peers every 4 seconds
+        if (!this.cleanupTimer) {
+          this.cleanupTimer = setInterval(() => {
+            const now = Date.now();
+            let changed = false;
+            for (const [key, peer] of this.peers.entries()) {
+              if (now - peer.lastSeen > 10000) { // 10 seconds timeout
+                this.peers.delete(key);
+                changed = true;
+              }
+            }
+            if (changed) {
+              this.emitPeers();
+            }
+          }, 4000);
+        }
+
         // Broadcast immediately on start
         this.broadcast();
         resolve();
@@ -86,26 +110,12 @@ class DiscoveryEngine {
         resolve();
       }
     });
+  }
 
-    // Broadcast announcement every 4 seconds
-    this.broadcastTimer = setInterval(() => {
-      this.broadcast();
-    }, 4000);
-
-    // Prune stale peers every 5 seconds
-    this.cleanupTimer = setInterval(() => {
-      const now = Date.now();
-      let changed = false;
-      for (const [key, peer] of this.peers.entries()) {
-        if (now - peer.lastSeen > 12000) { // 12 seconds timeout
-          this.peers.delete(key);
-          changed = true;
-        }
-      }
-      if (changed) {
-        this.emitPeers();
-      }
-    }, 5000);
+  getPlatformOs() {
+    if (process.platform === 'win32') return 'windows';
+    if (process.platform === 'darwin') return 'macos';
+    return 'linux';
   }
 
   broadcast() {
@@ -115,7 +125,7 @@ class DiscoveryEngine {
       protocol: 'RIRDROP',
       type: 'ANNOUNCE',
       alias: this.alias,
-      os: 'linux',
+      os: this.getPlatformOs(),
       deviceType: 'desktop',
       httpPort: this.httpPort,
       version: '1.0.0',
@@ -146,7 +156,7 @@ class DiscoveryEngine {
       protocol: 'RIRDROP',
       type: 'ANNOUNCE',
       alias: this.alias,
-      os: 'linux',
+      os: this.getPlatformOs(),
       deviceType: 'desktop',
       httpPort: this.httpPort,
       version: '1.0.0',
@@ -164,7 +174,7 @@ class DiscoveryEngine {
       protocol: 'RIRDROP',
       type: 'DISCOVER',
       alias: this.alias,
-      os: 'linux',
+      os: this.getPlatformOs(),
       httpPort: this.httpPort
     }));
     try {
