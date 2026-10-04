@@ -23,9 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,6 +53,10 @@ import com.rirdev.rirdrop.ui.theme.TextPrimary
 @Composable
 fun RirDropTopAppBar(
     localIp: String,
+    downloadCount: Int = 0,
+    hasUpdate: Boolean = false,
+    onDownloadsClicked: () -> Unit,
+    onUpdateClicked: () -> Unit,
     onScanQrClicked: () -> Unit,
     onMyQrClicked: () -> Unit
 ) {
@@ -67,7 +76,7 @@ fun RirDropTopAppBar(
             .fillMaxWidth()
             .background(BgDark)
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -123,16 +132,67 @@ fun RirDropTopAppBar(
             // Action Buttons
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // 1. Scan PC QR Button (Tactile green pill)
+                // Update indicator if new version released
+                if (hasUpdate) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(BrandGold.copy(alpha = 0.15f))
+                            .border(1.dp, BrandGold.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            .clickable { onUpdateClicked() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = "Update Available",
+                            tint = BrandGold,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Downloads Manager Button with Badge
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF161924))
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+                        .clickable { onDownloadsClicked() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    BadgedBox(
+                        badge = {
+                            if (downloadCount > 0) {
+                                Badge(
+                                    containerColor = NeonLime,
+                                    contentColor = Color.Black
+                                ) {
+                                    Text(text = "$downloadCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Downloads",
+                            tint = if (downloadCount > 0) NeonLime else TextPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Scan PC QR Button (Tactile green pill)
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .background(NeonLime.copy(alpha = 0.15f))
-                        .border(1.dp, NeonLime.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .border(1.dp, NeonLime.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
                         .clickable { onScanQrClicked() }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -141,22 +201,22 @@ fun RirDropTopAppBar(
                         tint = NeonLime,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Scan QR",
-                        fontSize = 12.sp,
+                        text = "Scan",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = NeonLime
                     )
                 }
 
-                // 2. My QR Code Button
+                // My QR Code Button
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF161924))
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
                         .clickable { onMyQrClicked() },
                     contentAlignment = Alignment.Center
                 ) {

@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import com.rirdev.rirdrop.ui.components.M3WavyLinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -117,16 +117,14 @@ fun SplashScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Official Material 3 LinearProgressIndicator
-            LinearProgressIndicator(
+            // Official Material 3 Expressive Wavy Progress Indicator
+            M3WavyLinearProgressIndicator(
                 progress = { animatedProgress },
                 modifier = Modifier
-                    .width(220.dp)
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
+                    .width(240.dp)
+                    .height(14.dp),
                 color = CardPastelLime,
-                trackColor = Color(0xFF262A36),
-                strokeCap = StrokeCap.Round
+                trackColor = Color(0xFF262A36)
             )
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -4,7 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.zxing.BarcodeFormat
@@ -16,6 +19,7 @@ import com.rirdev.rirdrop.server.LocalHttpServer
 import com.rirdev.rirdrop.server.SharedItem
 import com.rirdev.rirdrop.service.TransferService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,13 +31,21 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
 
 enum class NavTab {
     DASHBOARD,
     QUICK_DROP,
-    RADAR,
     STORAGE,
+    SPEED_TEST,
+    RADAR,
+    DOWNLOADS,
     SETTINGS
 }
 
@@ -92,11 +104,47 @@ data class StreamMediaItem(
     val isVideo: Boolean
 )
 
+data class DownloadedFileItem(
+    val file: File,
+    val name: String,
+    val sizeBytes: Long,
+    val sizeFormatted: String,
+    val lastModifiedFormatted: String,
+    val mimeType: String,
+    val isVideo: Boolean,
+    val isAudio: Boolean,
+    val isImage: Boolean
+)
+
+data class UpdateInfo(
+    val hasUpdate: Boolean,
+    val latestVersion: String,
+    val currentVersion: String,
+    val title: String,
+    val changelog: String,
+    val apkDownloadUrl: String?,
+    val htmlUrl: String
+)
+
+enum class BenchmarkPhase {
+    IDLE,
+    PING,
+    DOWNLOAD,
+    UPLOAD,
+    DONE,
+    ERROR
+}
+
 class RirDropViewModel : ViewModel() {
 
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(3, TimeUnit.SECONDS)
-        .readTimeout(6, TimeUnit.SECONDS)
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
+        .build()
+
+    private val speedTestClient = OkHttpClient.Builder()
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
     // 1. Boot / Splash State
@@ -117,6 +165,9 @@ class RirDropViewModel : ViewModel() {
     private val _deviceName = MutableStateFlow(NetworkUtils.getDeviceName())
     val deviceName: StateFlow<String> = _deviceName.asStateFlow()
 
+    private val _profileName = MutableStateFlow("JOHN DOE")
+    val profileName: StateFlow<String> = _profileName.asStateFlow()
+
     private val _localIp = MutableStateFlow(NetworkUtils.getLocalIpAddress())
     val localIp: StateFlow<String> = _localIp.asStateFlow()
 
@@ -131,6 +182,11 @@ class RirDropViewModel : ViewModel() {
 
     private val _activePairedPc = MutableStateFlow<PairedPc?>(null)
     val activePairedPc: StateFlow<PairedPc?> = _activePairedPc.asStateFlow()
+
+    private val _isApprovalPending = MutableStateFlow(false)
+    val isApprovalPending: StateFlow<Boolean> = _isApprovalPending.asStateFlow()
+
+    private var approvalPollingJob: Job? = null
 
     // 5. Shared Files (Phone Host & PC Synced)
     private val _sharedFiles = MutableStateFlow<List<SharedItem>>(emptyList())
@@ -165,6 +221,60 @@ class RirDropViewModel : ViewModel() {
     private val _showMyQrModal = MutableStateFlow(false)
     val showMyQrModal: StateFlow<Boolean> = _showMyQrModal.asStateFlow()
 
+    // 8. Speed Test: Live Network Monitor State
+    private val _liveHistoryDl = MutableStateFlow<List<Float>>(List(30) { 0f })
+    val liveHistoryDl: StateFlow<List<Float>> = _liveHistoryDl.asStateFlow()
+
+    private val _liveHistoryUl = MutableStateFlow<List<Float>>(List(30) { 0f })
+    val liveHistoryUl: StateFlow<List<Float>> = _liveHistoryUl.asStateFlow()
+
+    private val _livePeakDl = MutableStateFlow(0f)
+    val livePeakDl: StateFlow<Float> = _livePeakDl.asStateFlow()
+
+    private val _livePeakUl = MutableStateFlow(0f)
+    val livePeakUl: StateFlow<Float> = _livePeakUl.asStateFlow()
+
+    // 9. Speed Test: Internet Speed Benchmark State
+    private val _isBenchmarking = MutableStateFlow(false)
+    val isBenchmarking: StateFlow<Boolean> = _isBenchmarking.asStateFlow()
+
+    private val _benchmarkPhase = MutableStateFlow(BenchmarkPhase.IDLE)
+    val benchmarkPhase: StateFlow<BenchmarkPhase> = _benchmarkPhase.asStateFlow()
+
+    private val _benchmarkStatusText = MutableStateFlow("Ready to test connection")
+    val benchmarkStatusText: StateFlow<String> = _benchmarkStatusText.asStateFlow()
+
+    private val _benchmarkProgress = MutableStateFlow(0f)
+    val benchmarkProgress: StateFlow<Float> = _benchmarkProgress.asStateFlow()
+
+    private val _benchPingMs = MutableStateFlow(0f)
+    val benchPingMs: StateFlow<Float> = _benchPingMs.asStateFlow()
+
+    private val _benchJitterMs = MutableStateFlow(0f)
+    val benchJitterMs: StateFlow<Float> = _benchJitterMs.asStateFlow()
+
+    private val _benchDownloadMbps = MutableStateFlow(0f)
+    val benchDownloadMbps: StateFlow<Float> = _benchDownloadMbps.asStateFlow()
+
+    private val _benchUploadMbps = MutableStateFlow(0f)
+    val benchUploadMbps: StateFlow<Float> = _benchUploadMbps.asStateFlow()
+
+    private val _benchGaugeTarget = MutableStateFlow(0f)
+    val benchGaugeTarget: StateFlow<Float> = _benchGaugeTarget.asStateFlow()
+
+    private var benchmarkJob: Job? = null
+
+    // 10. Downloads Manager State
+    private val _downloadedFiles = MutableStateFlow<List<DownloadedFileItem>>(emptyList())
+    val downloadedFiles: StateFlow<List<DownloadedFileItem>> = _downloadedFiles.asStateFlow()
+
+    // 11. In-App GitHub Update Notification State
+    private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
+    val updateInfo: StateFlow<UpdateInfo?> = _updateInfo.asStateFlow()
+
+    private val _isCheckingUpdate = MutableStateFlow(false)
+    val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate.asStateFlow()
+
     private var discoveryEngine: DiscoveryEngine? = null
     private var httpServer: LocalHttpServer? = null
 
@@ -190,6 +300,40 @@ class RirDropViewModel : ViewModel() {
         }
     }
 
+    fun initPreferences(context: Context) {
+        val prefs = context.getSharedPreferences("rirdrop_prefs", Context.MODE_PRIVATE)
+        val savedDevice = prefs.getString("device_name", null)
+        if (!savedDevice.isNullOrBlank()) {
+            _deviceName.value = savedDevice
+        }
+        val savedProfile = prefs.getString("profile_name", null)
+        if (!savedProfile.isNullOrBlank()) {
+            _profileName.value = savedProfile
+        }
+        refreshDownloadedFiles(context)
+        checkForUpdates(silent = true)
+    }
+
+    fun setDeviceName(context: Context, name: String) {
+        val trimmed = name.trim().take(32)
+        if (trimmed.isNotEmpty()) {
+            _deviceName.value = trimmed
+            context.getSharedPreferences("rirdrop_prefs", Context.MODE_PRIVATE)
+                .edit().putString("device_name", trimmed).apply()
+            showMessage("Device name set to $trimmed")
+        }
+    }
+
+    fun setProfileName(context: Context, name: String) {
+        val trimmed = name.trim().take(32)
+        if (trimmed.isNotEmpty()) {
+            _profileName.value = trimmed
+            context.getSharedPreferences("rirdrop_prefs", Context.MODE_PRIVATE)
+                .edit().putString("profile_name", trimmed).apply()
+            showMessage("Display name updated")
+        }
+    }
+
     fun attachEngines(discovery: DiscoveryEngine, server: LocalHttpServer?) {
         this.discoveryEngine = discovery
         this.httpServer = server
@@ -201,7 +345,6 @@ class RirDropViewModel : ViewModel() {
 
     fun refreshNetworkInfo() {
         _localIp.value = NetworkUtils.getLocalIpAddress()
-        _deviceName.value = NetworkUtils.getDeviceName()
     }
 
     fun updateDiscoveredPeers(peers: List<PeerDevice>) {
@@ -255,16 +398,26 @@ class RirDropViewModel : ViewModel() {
             context.startService(intent)
         }
         showMessage("Downloading $fileName to phone Downloads...")
+        viewModelScope.launch {
+            delay(1500)
+            refreshDownloadedFiles(context)
+        }
     }
 
-    // Connect to a PC given IP and Port
-    fun connectToPc(ip: String, port: Int = 53318, pcName: String? = null) {
+    // Connect to a PC with automatic approval polling
+    fun connectToPc(ip: String, port: Int = 53318, pcName: String? = null, password: String? = null) {
+        approvalPollingJob?.cancel()
+        _isApprovalPending.value = false
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val json = JSONObject().apply {
                     put("deviceName", _deviceName.value)
                     put("os", "Android")
                     put("fingerprint", "android-${System.currentTimeMillis()}")
+                    if (!password.isNullOrBlank()) {
+                        put("password", password)
+                    }
                 }
                 val body = json.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
@@ -277,6 +430,7 @@ class RirDropViewModel : ViewModel() {
                 val respJson = JSONObject(respBody)
                 val status = respJson.optString("status", "pending")
                 val token = if (respJson.has("token")) respJson.getString("token") else null
+                val requestId = respJson.optString("requestId", "")
 
                 val paired = PairedPc(
                     ip = ip,
@@ -301,18 +455,82 @@ class RirDropViewModel : ViewModel() {
                     _connectedPeers.value = updatedConnected
                 }
 
-                // Immediately fetch shared data from this PC
-                fetchPcSharedData(ip, port, token)
-
                 if (status == "authorized") {
+                    _isApprovalPending.value = false
+                    fetchPcSharedData(ip, port, token)
                     showMessage("✔ Connected with PC ($ip)")
+                } else if (status == "pending" && requestId.isNotEmpty()) {
+                    _isApprovalPending.value = true
+                    showMessage("Approval request sent! Click 'Accept' on your PC desktop")
+                    startApprovalPolling(ip, port, pcName, requestId)
                 } else {
-                    showMessage("Approval request sent to PC ($ip)")
+                    fetchPcSharedData(ip, port, null)
                 }
             } catch (e: Exception) {
                 // If direct connect fails, still try fetching shared data
                 fetchPcSharedData(ip, port, null)
             }
+        }
+    }
+
+    private fun startApprovalPolling(ip: String, port: Int, pcName: String?, requestId: String) {
+        approvalPollingJob = viewModelScope.launch(Dispatchers.IO) {
+            var attempts = 0
+            val maxAttempts = 60 // 90 seconds max
+            while (attempts < maxAttempts && _isApprovalPending.value) {
+                delay(1500)
+                attempts++
+                try {
+                    val pollUrl = "http://$ip:$port/api/poll-status?requestId=$requestId"
+                    val res = httpClient.newCall(Request.Builder().url(pollUrl).build()).execute()
+                    if (res.isSuccessful) {
+                        val body = res.body?.string() ?: "{}"
+                        val json = JSONObject(body)
+                        val status = json.optString("status")
+                        if (status == "authorized") {
+                            val token = json.optString("token")
+                            val paired = PairedPc(
+                                ip = ip,
+                                port = port,
+                                name = pcName ?: "PC ($ip)",
+                                token = token,
+                                status = "Connected"
+                            )
+                            _activePairedPc.value = paired
+                            _isApprovalPending.value = false
+                            fetchPcSharedData(ip, port, token)
+                            showMessage("✔ PC Approved! 3 shared folders unlocked.")
+                            break
+                        } else if (status == "rejected_or_expired") {
+                            _isApprovalPending.value = false
+                            showMessage("Connection request rejected on PC")
+                            break
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+            if (_isApprovalPending.value && attempts >= maxAttempts) {
+                _isApprovalPending.value = false
+                showMessage("Approval request timed out. Please retry.")
+            }
+        }
+    }
+
+    fun cancelApprovalRequest() {
+        approvalPollingJob?.cancel()
+        _isApprovalPending.value = false
+    }
+
+    fun refreshPcShared() {
+        val pc = _activePairedPc.value
+        val ip = pc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = pc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+        val token = pc?.token
+        if (ip != null) {
+            fetchPcSharedData(ip, port, token)
+            showMessage("Refreshing PC shared storage...")
+        } else {
+            showMessage("No PC detected yet. Scan radar or connect by IP.")
         }
     }
 
@@ -517,6 +735,7 @@ class RirDropViewModel : ViewModel() {
         }
     }
 
+    // Continuous background synchronization with PC
     private fun startPcContinuousSync() {
         viewModelScope.launch(Dispatchers.IO) {
             while (true) {
@@ -534,36 +753,391 @@ class RirDropViewModel : ViewModel() {
         }
     }
 
+    // Telemetry & rolling speed history ticker
     private fun startSpeedTelemetrySimulation() {
         viewModelScope.launch(Dispatchers.Default) {
             while (true) {
-                delay(1500)
-                if (_activePairedPc.value != null || _sharedFiles.value.isNotEmpty() || _pcQuickDropFiles.value.isNotEmpty()) {
-                    val activeShares = _sharedFiles.value.size + _pcQuickDropFiles.value.size
-                    val upMb = (activeShares * 2.8f).coerceAtLeast(1.2f)
-                    val downMb = (activeShares * 3.4f).coerceAtLeast(2.1f)
-                    _speedStats.value = SpeedStats(
-                        upSpeedStr = String.format("%.1f MB/s", upMb),
-                        downSpeedStr = String.format("%.1f MB/s", downMb),
-                        upBytesPerSec = (upMb * 1024 * 1024).toLong(),
-                        downBytesPerSec = (downMb * 1024 * 1024).toLong()
-                    )
+                delay(1000)
+                val activeShares = _sharedFiles.value.size + _pcQuickDropFiles.value.size
+                val isConnected = _activePairedPc.value != null
+
+                val upMb: Float
+                val downMb: Float
+
+                if (isConnected || activeShares > 0) {
+                    upMb = (activeShares * 2.8f + (Math.random().toFloat() * 1.5f)).coerceAtLeast(1.2f)
+                    downMb = (activeShares * 3.4f + (Math.random().toFloat() * 2.1f)).coerceAtLeast(2.4f)
                 } else {
-                    _speedStats.value = SpeedStats(
-                        upSpeedStr = "0.0 MB/s",
-                        downSpeedStr = "0.0 MB/s",
-                        upBytesPerSec = 0L,
-                        downBytesPerSec = 0L
-                    )
+                    upMb = 0f
+                    downMb = 0f
                 }
+
+                _speedStats.value = SpeedStats(
+                    upSpeedStr = String.format(Locale.US, "%.1f MB/s", upMb),
+                    downSpeedStr = String.format(Locale.US, "%.1f MB/s", downMb),
+                    upBytesPerSec = (upMb * 1024 * 1024).toLong(),
+                    downBytesPerSec = (downMb * 1024 * 1024).toLong()
+                )
+
+                // Update rolling graph history for Live Network tab
+                val currentDl = _liveHistoryDl.value.toMutableList()
+                val currentUl = _liveHistoryUl.value.toMutableList()
+
+                val dlMbps = downMb * 8f
+                val ulMbps = upMb * 8f
+
+                if (currentDl.size >= 30) currentDl.removeAt(0)
+                currentDl.add(dlMbps)
+                _liveHistoryDl.value = currentDl
+
+                if (currentUl.size >= 30) currentUl.removeAt(0)
+                currentUl.add(ulMbps)
+                _liveHistoryUl.value = currentUl
+
+                _livePeakDl.value = max(_livePeakDl.value, dlMbps)
+                _livePeakUl.value = max(_livePeakUl.value, ulMbps)
             }
         }
     }
 
-    private fun formatBytes(bytes: Long): String {
+    // Active Speed Benchmark Engine (Using Cloudflare speed nodes matching Desktop)
+    fun startBenchmarkTest() {
+        if (_isBenchmarking.value) return
+        benchmarkJob?.cancel()
+
+        benchmarkJob = viewModelScope.launch(Dispatchers.IO) {
+            _isBenchmarking.value = true
+            _benchmarkPhase.value = BenchmarkPhase.PING
+            _benchmarkProgress.value = 0.05f
+            _benchmarkStatusText.value = "Measuring latency (Ping & Jitter)..."
+            _benchGaugeTarget.value = 10f
+
+            try {
+                // 1. Latency & Jitter Phase
+                val pings = mutableListOf<Float>()
+                for (i in 0 until 4) {
+                    val t0 = System.currentTimeMillis()
+                    val req = Request.Builder()
+                        .url("https://speed.cloudflare.com/__down?bytes=0")
+                        .header("User-Agent", "RirDrop-SpeedTester/1.0")
+                        .build()
+                    val resp = speedTestClient.newCall(req).execute()
+                    resp.close()
+                    val elapsed = (System.currentTimeMillis() - t0).toFloat()
+                    pings.add(elapsed)
+                    delay(120)
+                }
+
+                val minPing = if (pings.isNotEmpty()) pings.minOrNull() ?: 12f else 12f
+                val jitter = if (pings.size >= 2) {
+                    var diffSum = 0f
+                    for (i in 1 until pings.size) {
+                        diffSum += Math.abs(pings[i] - pings[i - 1])
+                    }
+                    diffSum / (pings.size - 1)
+                } else 2.5f
+
+                _benchPingMs.value = minPing
+                _benchJitterMs.value = jitter
+                _benchmarkProgress.value = 0.20f
+
+                // 2. Download Throughput Phase
+                _benchmarkPhase.value = BenchmarkPhase.DOWNLOAD
+                _benchmarkStatusText.value = "Testing Download Speed..."
+                val dlSpeeds = mutableListOf<Float>()
+                val dlDurationMs = 5000L
+                val dlStartTime = System.currentTimeMillis()
+                val dlEndTime = dlStartTime + dlDurationMs
+
+                while (System.currentTimeMillis() < dlEndTime && _isBenchmarking.value) {
+                    val req = Request.Builder()
+                        .url("https://speed.cloudflare.com/__down?bytes=20000000")
+                        .header("User-Agent", "RirDrop-SpeedTester/1.0")
+                        .build()
+
+                    val call = speedTestClient.newCall(req)
+                    val resp = call.execute()
+                    val body = resp.body
+                    if (body != null) {
+                        val input = body.byteStream()
+                        val buffer = ByteArray(64 * 1024)
+                        var chunkBytes = 0L
+                        val chunkStart = System.currentTimeMillis()
+
+                        var read: Int
+                        while (input.read(buffer).also { read = it } != -1 && _isBenchmarking.value && System.currentTimeMillis() < dlEndTime) {
+                            chunkBytes += read
+                            val dt = (System.currentTimeMillis() - chunkStart) / 1000f
+                            if (dt > 0.1f) {
+                                val instantMbps = (chunkBytes * 8f) / (dt * 1000000f)
+                                _benchDownloadMbps.value = instantMbps
+                                _benchGaugeTarget.value = instantMbps
+                                val elapsed = System.currentTimeMillis() - dlStartTime
+                                val p = 0.20f + (elapsed.toFloat() / dlDurationMs) * 0.40f
+                                _benchmarkProgress.value = min(0.60f, p)
+                            }
+                        }
+                        val finalDt = (System.currentTimeMillis() - chunkStart) / 1000f
+                        if (finalDt > 0.05f) {
+                            val spd = (chunkBytes * 8f) / (finalDt * 1000000f)
+                            dlSpeeds.add(spd)
+                        }
+                        resp.close()
+                    }
+                }
+
+                val avgDl = if (dlSpeeds.isNotEmpty()) dlSpeeds.average().toFloat() else _benchDownloadMbps.value
+                _benchDownloadMbps.value = avgDl
+
+                // 3. Upload Throughput Phase
+                _benchmarkPhase.value = BenchmarkPhase.UPLOAD
+                _benchmarkStatusText.value = "Testing Upload Speed..."
+                val ulSpeeds = mutableListOf<Float>()
+                val ulDurationMs = 4000L
+                val ulStartTime = System.currentTimeMillis()
+                val ulEndTime = ulStartTime + ulDurationMs
+
+                val payload = ByteArray(4 * 1024 * 1024) // 4MB
+                val body = payload.toRequestBody("application/octet-stream".toMediaType())
+
+                while (System.currentTimeMillis() < ulEndTime && _isBenchmarking.value) {
+                    val req = Request.Builder()
+                        .url("https://speed.cloudflare.com/__up")
+                        .header("User-Agent", "RirDrop-SpeedTester/1.0")
+                        .post(body)
+                        .build()
+
+                    val t0 = System.currentTimeMillis()
+                    val resp = speedTestClient.newCall(req).execute()
+                    resp.close()
+                    val dt = (System.currentTimeMillis() - t0) / 1000f
+                    if (dt > 0.05f) {
+                        val instantMbps = (payload.size * 8f) / (dt * 1000000f)
+                        ulSpeeds.add(instantMbps)
+                        _benchUploadMbps.value = instantMbps
+                        _benchGaugeTarget.value = instantMbps
+                    }
+                    val elapsed = System.currentTimeMillis() - ulStartTime
+                    val p = 0.60f + (elapsed.toFloat() / ulDurationMs) * 0.38f
+                    _benchmarkProgress.value = min(0.98f, p)
+                }
+
+                val avgUl = if (ulSpeeds.isNotEmpty()) ulSpeeds.average().toFloat() else _benchUploadMbps.value
+                _benchUploadMbps.value = avgUl
+
+                // 4. Completed Phase
+                _benchmarkProgress.value = 1.0f
+                _benchmarkPhase.value = BenchmarkPhase.DONE
+                _benchmarkStatusText.value = "Speed test completed successfully"
+                _isBenchmarking.value = false
+            } catch (e: Exception) {
+                _benchmarkPhase.value = BenchmarkPhase.ERROR
+                _benchmarkStatusText.value = "Test error: ${e.message ?: "Network timeout"}"
+                _isBenchmarking.value = false
+            }
+        }
+    }
+
+    fun cancelBenchmarkTest() {
+        benchmarkJob?.cancel()
+        _isBenchmarking.value = false
+        _benchmarkPhase.value = BenchmarkPhase.IDLE
+        _benchmarkStatusText.value = "Benchmark cancelled"
+        _benchmarkProgress.value = 0f
+        _benchGaugeTarget.value = 0f
+    }
+
+    // Downloads Manager: Scan device Downloads/RirDrop
+    fun refreshDownloadedFiles(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = mutableListOf<DownloadedFileItem>()
+            val primaryDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "RirDrop")
+            val fallbackDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+
+            val dirsToScan = listOfNotNull(primaryDir, fallbackDir)
+            val sdf = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+
+            for (dir in dirsToScan) {
+                if (dir.exists() && dir.isDirectory) {
+                    val files = dir.listFiles() ?: emptyArray()
+                    for (file in files) {
+                        if (file.isFile && !file.name.startsWith(".")) {
+                            val name = file.name
+                            val size = file.length()
+                            val mime = getMimeType(name)
+                            val isVideo = mime.startsWith("video/") || name.matches(Regex(""".*\.(mp4|mkv|webm|avi|mov)$""", RegexOption.IGNORE_CASE))
+                            val isAudio = mime.startsWith("audio/") || name.matches(Regex(""".*\.(mp3|flac|wav|ogg|m4a|aac)$""", RegexOption.IGNORE_CASE))
+                            val isImage = mime.startsWith("image/") || name.matches(Regex(""".*\.(jpg|jpeg|png|webp|gif)$""", RegexOption.IGNORE_CASE))
+
+                            list.add(
+                                DownloadedFileItem(
+                                    file = file,
+                                    name = name,
+                                    sizeBytes = size,
+                                    sizeFormatted = formatBytes(size),
+                                    lastModifiedFormatted = sdf.format(Date(file.lastModified())),
+                                    mimeType = mime,
+                                    isVideo = isVideo,
+                                    isAudio = isAudio,
+                                    isImage = isImage
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+            // Sort newest first
+            list.sortByDescending { it.file.lastModified() }
+            _downloadedFiles.value = list
+        }
+    }
+
+    fun deleteDownloadedFile(context: Context, item: DownloadedFileItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (item.file.exists()) {
+                    item.file.delete()
+                }
+                refreshDownloadedFiles(context)
+                showMessage("Deleted ${item.name}")
+            } catch (e: Exception) {
+                showMessage("Failed to delete file: ${e.message}")
+            }
+        }
+    }
+
+    fun openDownloadedFile(context: Context, item: DownloadedFileItem) {
+        try {
+            val uri = FileProvider.getUriForFile(context, "com.rirdev.rirdrop.fileprovider", item.file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, item.mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(intent, "Open with"))
+        } catch (e: Exception) {
+            showMessage("Could not open file: ${e.message}")
+        }
+    }
+
+    fun shareDownloadedFile(context: Context, item: DownloadedFileItem) {
+        try {
+            val uri = FileProvider.getUriForFile(context, "com.rirdev.rirdrop.fileprovider", item.file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = item.mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(intent, "Share file"))
+        } catch (e: Exception) {
+            showMessage("Could not share file: ${e.message}")
+        }
+    }
+
+    // In-App GitHub Release Update Checker
+    fun checkForUpdates(silent: Boolean = false) {
+        if (_isCheckingUpdate.value) return
+        _isCheckingUpdate.value = true
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = "https://api.github.com/repos/rirdev/RirDrop/releases/latest"
+                val req = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "RirDrop-Android/1.0")
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .build()
+
+                val resp = httpClient.newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string() ?: "{}"
+                    val json = JSONObject(body)
+                    val tagName = json.optString("tag_name", "").replace(Regex("""^v""", RegexOption.IGNORE_CASE), "")
+                    val releaseTitle = json.optString("name", "RirDrop v$tagName")
+                    val releaseBody = json.optString("body", "Performance improvements, enhanced Material 3 UI, and bug fixes.")
+                    val htmlUrl = json.optString("html_url", "https://github.com/rirdev/RirDrop")
+
+                    var apkUrl: String? = null
+                    val assets = json.optJSONArray("assets")
+                    if (assets != null) {
+                        for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            val name = asset.optString("name", "").lowercase()
+                            if (name.endsWith(".apk")) {
+                                apkUrl = asset.optString("browser_download_url")
+                                break
+                            }
+                        }
+                    }
+
+                    val currentVer = "1.0.0"
+                    val isNewer = isVersionGreater(tagName, currentVer)
+
+                    if (isNewer) {
+                        _updateInfo.value = UpdateInfo(
+                            hasUpdate = true,
+                            latestVersion = tagName,
+                            currentVersion = currentVer,
+                            title = releaseTitle,
+                            changelog = releaseBody,
+                            apkDownloadUrl = apkUrl,
+                            htmlUrl = htmlUrl
+                        )
+                        if (!silent) {
+                            showMessage("Update found: v$tagName is available!")
+                        }
+                    } else {
+                        if (!silent) {
+                            showMessage("You are on the latest version (v$currentVer)")
+                        }
+                    }
+                } else {
+                    if (!silent) showMessage("Could not check updates: HTTP ${resp.code}")
+                }
+            } catch (e: Exception) {
+                if (!silent) showMessage("Update check failed: ${e.message}")
+            } finally {
+                _isCheckingUpdate.value = false
+            }
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        _updateInfo.value = null
+    }
+
+    private fun isVersionGreater(remote: String, local: String): Boolean {
+        if (remote.isBlank()) return false
+        val rParts = remote.split(".").mapNotNull { it.toIntOrNull() }
+        val lParts = local.split(".").mapNotNull { it.toIntOrNull() }
+        val len = max(rParts.size, lParts.size)
+        for (i in 0 until len) {
+            val r = rParts.getOrElse(i) { 0 }
+            val l = lParts.getOrElse(i) { 0 }
+            if (r > l) return true
+            if (r < l) return false
+        }
+        return false
+    }
+
+    private fun getMimeType(fileName: String): String {
+        val ext = fileName.substringAfterLast('.', "").lowercase()
+        return when (ext) {
+            "mp4", "mkv", "webm", "avi", "mov" -> "video/$ext"
+            "mp3", "flac", "wav", "ogg", "m4a", "aac" -> "audio/$ext"
+            "jpg", "jpeg", "png", "webp", "gif" -> "image/$ext"
+            "pdf" -> "application/pdf"
+            "apk" -> "application/vnd.android.package-archive"
+            "zip", "tar", "gz" -> "application/zip"
+            else -> "application/octet-stream"
+        }
+    }
+
+    fun formatBytes(bytes: Long): String {
         if (bytes <= 0) return "0 B"
         val units = arrayOf("B", "KB", "MB", "GB", "TB")
         val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt()
-        return String.format("%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
+        return String.format(Locale.US, "%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
     }
 }

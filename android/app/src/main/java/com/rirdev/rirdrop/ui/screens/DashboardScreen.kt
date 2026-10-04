@@ -29,21 +29,30 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Radar
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,8 +66,10 @@ import androidx.compose.ui.unit.sp
 import com.rirdev.rirdrop.ui.NavTab
 import com.rirdev.rirdrop.ui.RirDropViewModel
 import com.rirdev.rirdrop.ui.StreamMediaItem
+import com.rirdev.rirdrop.ui.components.M3WavyLinearProgressIndicator
 import com.rirdev.rirdrop.ui.theme.BgDark
 import com.rirdev.rirdrop.ui.theme.BorderSubtle
+import com.rirdev.rirdrop.ui.theme.BrandGold
 import com.rirdev.rirdrop.ui.theme.CardMatteDark
 import com.rirdev.rirdrop.ui.theme.CardMatteDarkBorder
 import com.rirdev.rirdrop.ui.theme.CardPastelAmber
@@ -87,7 +98,10 @@ fun DashboardScreen(
     val pcQuickDropFiles by viewModel.pcQuickDropFiles.collectAsState()
     val pcSharedFolders by viewModel.pcSharedFolders.collectAsState()
     val deviceName by viewModel.deviceName.collectAsState()
+    val profileName by viewModel.profileName.collectAsState()
     val localIp by viewModel.localIp.collectAsState()
+
+    var showEditProfileDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     Column(
@@ -98,40 +112,52 @@ fun DashboardScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Top Bar / Hero Header
+        // 1. Top Bar / Hero Greeting Header (Matching Desktop greetingUser)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { showEditProfileDialog = true }
+                ) {
+                    Text(
+                        text = "Hello, $profileName",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Name",
+                        tint = BrandGold,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(7.dp)
                             .clip(CircleShape)
                             .background(StatusOnline)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = deviceName,
+                        text = "$deviceName • LAN $localIp",
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary
+                        color = TextMuted,
+                        fontWeight = FontWeight.Medium
                     )
                 }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "RirDrop Studio",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
-                    color = TextPrimary
-                )
             }
 
             // Quick Scan Action Pill
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = SurfaceDark,
                 border = BorderStroke(1.dp, BorderSubtle),
                 modifier = Modifier.clickable { onScanQrClicked() }
@@ -218,14 +244,14 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "UPLOAD",
+                                text = "UPLOAD SPEED",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = CardPastelLimeText.copy(alpha = 0.7f)
                             )
                             Text(
                                 text = speedStats.upSpeedStr,
-                                fontSize = 15.sp,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
                                 color = CardPastelLimeText
                             )
@@ -251,14 +277,14 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "DOWNLOAD",
+                                text = "DOWNLOAD SPEED",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = CardPastelLimeText.copy(alpha = 0.7f)
                             )
                             Text(
                                 text = speedStats.downSpeedStr,
-                                fontSize = 15.sp,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
                                 color = CardPastelLimeText
                             )
@@ -266,48 +292,101 @@ fun DashboardScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Official M3 Expressive Wavy Progress Indicator on Card
+                M3WavyLinearProgressIndicator(
+                    progress = { if (activePairedPc != null || pcQuickDropFiles.isNotEmpty()) 0.8f else 0.25f },
+                    color = CardPastelLimeText,
+                    trackColor = CardPastelLimeText.copy(alpha = 0.18f),
+                    modifier = Modifier.fillMaxWidth().height(14.dp)
+                )
+
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Action Pill Inside Lime Card
-                Surface(
+                Button(
+                    onClick = { onPickFilesClicked() },
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = CardPastelLimeText,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onPickFilesClicked() }
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CardPastelLimeText,
+                        contentColor = Color.White
+                    )
                 ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Send",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Send Files from Phone (${sharedFiles.size} Active)",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Drop Files",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Drop Files from Phone",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
                 }
             }
         }
 
-        // 3. Mockup Hero Card 2: Pastel Amber PC Pairing & Link
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    if (activePairedPc == null) {
-                        viewModel.selectTab(NavTab.RADAR)
+        // 3. Quick Action Feature Tiles: Speed Test & PC Storage
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Speed Test Tile
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { viewModel.selectTab(NavTab.SPEED_TEST) },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = CardMatteDark),
+                border = BorderStroke(1.dp, CardMatteDarkBorder)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(NeonLime.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = NeonLime, modifier = Modifier.size(20.dp))
                     }
-                },
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(text = "Speed Test", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(text = "Live throughput & latency", fontSize = 11.sp, color = TextMuted)
+                }
+            }
+
+            // PC Storage Tile
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { viewModel.selectTab(NavTab.STORAGE) },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = CardMatteDark),
+                border = BorderStroke(1.dp, CardMatteDarkBorder)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(StreamCyan.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.FolderShared, contentDescription = null, tint = StreamCyan, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(text = "PC Storage", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(text = "${pcSharedFolders.size} Shared Folders", fontSize = 11.sp, color = TextMuted)
+                }
+            }
+        }
+
+        // 4. Hero Card 2: Pastel Amber PC Paired Status
+        Card(
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = CardPastelAmber)
         ) {
@@ -315,18 +394,18 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
-                            .background(CardPastelAmberText.copy(alpha = 0.12f)),
+                            .background(CardPastelAmberText.copy(alpha = 0.14f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -336,7 +415,9 @@ fun DashboardScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     }
+
                     Spacer(modifier = Modifier.width(12.dp))
+
                     Column {
                         Text(
                             text = if (activePairedPc != null) "Paired: ${activePairedPc?.name}" else "No PC Connected",
@@ -347,7 +428,7 @@ fun DashboardScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (activePairedPc != null) "${activePairedPc?.ip}:${activePairedPc?.port} • Tunnel Active" else "Tap to open Radar or Scan QR",
+                            text = if (activePairedPc != null) "${activePairedPc?.ip}:${activePairedPc?.port} • Tunnel Active" else "Tap to open Storage or Scan QR",
                             fontSize = 11.sp,
                             color = CardPastelAmberText.copy(alpha = 0.8f)
                         )
@@ -358,15 +439,11 @@ fun DashboardScreen(
                     shape = RoundedCornerShape(12.dp),
                     color = CardPastelAmberText,
                     modifier = Modifier.clickable {
-                        if (activePairedPc != null) {
-                            viewModel.selectTab(NavTab.STORAGE)
-                        } else {
-                            viewModel.selectTab(NavTab.RADAR)
-                        }
+                        viewModel.selectTab(NavTab.STORAGE)
                     }
                 ) {
                     Text(
-                        text = if (activePairedPc != null) "Storage" else "Radar",
+                        text = if (activePairedPc != null) "Storage" else "Connect",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -376,7 +453,7 @@ fun DashboardScreen(
             }
         }
 
-        // 4. Matte Dark Card: Live PC Quick Drop Glance
+        // 5. Matte Dark Card: Live PC Quick Drop Glance
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -418,95 +495,60 @@ fun DashboardScreen(
                 if (pcQuickDropFiles.isEmpty()) {
                     Text(
                         text = if (activePairedPc != null) {
-                            "Drop any video, music, or document onto your PC RirDrop screen to stream or download instantly on this phone!"
+                            "No files dropped on PC yet. Drag files into your PC RirDrop Quick Drop zone to see them here immediately."
                         } else {
-                            "Pair your PC to see Quick Drop files synced in real-time."
+                            "Connect to your PC to see files dropped from desktop."
                         },
                         fontSize = 12.sp,
                         color = TextMuted,
-                        lineHeight = 17.sp
+                        lineHeight = 16.sp
                     )
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        pcQuickDropFiles.take(3).forEach { pcFile ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(SurfaceDark)
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = pcFile.name,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = TextPrimary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "${pcFile.sizeFormatted} • ${if (pcFile.isVideo) "Video" else if (pcFile.isAudio) "Audio" else "File"}",
-                                        fontSize = 11.sp,
-                                        color = TextMuted
-                                    )
-                                }
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    if (pcFile.isVideo || pcFile.isAudio) {
-                                        Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = StreamCyan.copy(alpha = 0.2f),
-                                            modifier = Modifier.clickable {
-                                                viewModel.playMedia(
-                                                    StreamMediaItem(
-                                                        title = pcFile.name,
-                                                        mimeType = pcFile.mimeType,
-                                                        url = pcFile.streamUrl,
-                                                        isVideo = pcFile.isVideo
-                                                    )
-                                                )
-                                            }
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.PlayArrow,
-                                                    contentDescription = "Stream",
-                                                    tint = StreamCyan,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(3.dp))
-                                                Text(text = "Stream", fontSize = 11.sp, color = StreamCyan, fontWeight = FontWeight.Bold)
-                                            }
-                                        }
-                                    }
-
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = NeonLime.copy(alpha = 0.2f),
-                                        modifier = Modifier.clickable {
-                                            viewModel.downloadToPhone(context, pcFile.downloadUrl, pcFile.name)
-                                        }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Download,
-                                                contentDescription = "Download",
-                                                tint = NeonLime,
-                                                modifier = Modifier.size(14.dp)
+                    pcQuickDropFiles.take(3).forEach { file ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = file.name,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = file.sizeFormatted,
+                                    fontSize = 11.sp,
+                                    color = TextMuted
+                                )
+                            }
+                            if (file.isVideo || file.isAudio) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = StreamCyan.copy(alpha = 0.15f),
+                                    modifier = Modifier.clickable {
+                                        viewModel.playMedia(
+                                            StreamMediaItem(
+                                                title = file.name,
+                                                mimeType = file.mimeType,
+                                                url = file.streamUrl,
+                                                isVideo = file.isVideo
                                             )
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Text(text = "Save", fontSize = 11.sp, color = NeonLime, fontWeight = FontWeight.Bold)
-                                        }
+                                        )
                                     }
+                                ) {
+                                    Text(
+                                        text = "STREAM",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StreamCyan,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
                                 }
                             }
                         }
@@ -515,90 +557,41 @@ fun DashboardScreen(
             }
         }
 
-        // 5. Shared Storage & Radar Row Tiles
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Storage Tile
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, CardMatteDarkBorder, RoundedCornerShape(20.dp))
-                    .clickable { viewModel.selectTab(NavTab.STORAGE) },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = CardMatteDark)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFC084FC).copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FolderShared,
-                            contentDescription = "Folders",
-                            tint = Color(0xFFC084FC),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "PC Storage",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${pcSharedFolders.size} Folders Shared",
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
-                }
-            }
+        Spacer(modifier = Modifier.height(10.dp))
+    }
 
-            // Radar Tile
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, CardMatteDarkBorder, RoundedCornerShape(20.dp))
-                    .clickable { viewModel.selectTab(NavTab.RADAR) },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = CardMatteDark)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(StreamCyan.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Radar,
-                            contentDescription = "Radar",
-                            tint = StreamCyan,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "LAN Radar",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${discoveredPeers.size} Devices Found",
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
+    // Name Change Dialog
+    if (showEditProfileDialog) {
+        var tempName by remember { mutableStateOf(profileName) }
+        AlertDialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            title = { Text("Change Display Name", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = {
+                OutlinedTextField(
+                    value = tempName,
+                    onValueChange = { tempName = it },
+                    label = { Text("Display Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.setProfileName(context, tempName)
+                        showEditProfileDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandGold)
+                ) {
+                    Text("Save", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(72.dp)) // Padding for floating bottom pill
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfileDialog = false }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            },
+            containerColor = Color(0xFF191D28)
+        )
     }
 }
