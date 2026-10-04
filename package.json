@@ -1,11 +1,13 @@
 {
   "name": "rirdrop",
+  "productName": "RirDrop",
   "version": "1.0.0",
   "description": "Offline Local File Sharing & Media Streaming Suite",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node tests/test-server.js && node tests/test-downloader.js && node tests/test-updates.js"
+    "test": "node tests/test-server.js && node tests/test-downloader.js && node tests/test-updates.js",
+    "build:linux": "electron-builder --linux"
   },
   "keywords": [
     "file-sharing",
@@ -15,13 +17,39 @@
     "video-stream",
     "cross-platform"
   ],
-  "author": "RirDrop Team",
+  "author": "RirDev <dev@rirdev.com>",
+  "desktopName": "rirdrop.desktop",
   "license": "MIT",
   "dependencies": {
-    "electron": "^44.5.1",
     "firebase": "^12.19.0",
     "mime-types": "^2.1.35",
     "qrcode": "^1.5.4",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.rirdev.rirdrop",
+    "productName": "RirDrop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Network",
+      "maintainer": "RirDev <dev@rirdev.com>",
+      "syncDesktopName": true
+    }
   }
 }
