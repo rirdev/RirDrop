@@ -1,0 +1,27 @@
+{
+  "name": "rirdrop",
+  "version": "1.0.0",
+  "description": "Offline Local File Sharing & Media Streaming Suite",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/test-server.js && node tests/test-downloader.js && node tests/test-updates.js"
+  },
+  "keywords": [
+    "file-sharing",
+    "offline",
+    "lan",
+    "streaming",
+    "video-stream",
+    "cross-platform"
+  ],
+  "author": "RirDrop Team",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^44.5.1",
+    "firebase": "^12.19.0",
+    "mime-types": "^2.1.35",
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}

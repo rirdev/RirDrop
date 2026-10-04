@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RirDrop Admin Center - Release & Update Broadcast</title>
+  <style>
+    :root {
+      --bg-dark: #090a10;
+      --card-bg: #12141f;
+      --card-subtle: #181b29;
+      --border-color: #232738;
+      --accent-purple: #6366f1;
+      --accent-purple-glow: rgba(99, 102, 241, 0.35);
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background Glow */
+    .ambient-glow {
+      position: fixed;
+      top: -150px;
+      right: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(9, 10, 16, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .ambient-glow-left {
+      position: fixed;
+      bottom: -150px;
+      left: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, rgba(9, 10, 16, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header */
+    header {
+      background: rgba(18, 20, 31, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px var(--accent-purple-glow);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: #ffffff;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .badge-status .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .btn-logout {
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fda4af;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-logout:hover {
+      background: rgba(244, 63, 94, 0.22);
+      color: #fff;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      max-width: 1040px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Lock Screen / PIN Modal */
+    #pinLockModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 10, 16, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .pin-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 36px 32px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .pin-avatar {
+      width: 60px;
+      height: 60px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      color: var(--accent-purple);
+    }
+
+    .pin-avatar svg {
+      width: 28px;
+      height: 28px;
+      stroke: currentColor;
+    }
+
+    .pin-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .pin-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .pin-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .pin-input {
+      width: 100%;
+      background: var(--card-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: var(--font-mono);
+      text-align: center;
+      letter-spacing: 0.25em;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .pin-input:focus {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 0 3px var(--accent-purple-glow);
+    }
+
+    .pin-error {
+      color: var(--accent-rose);
+      font-size: 0.82rem;
+      display: none;
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+
+    @media (max-width: 860px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .card-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--accent-purple);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 9px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 14px var(--accent-purple-glow);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: var(--card-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: #1f2233;
+      border-color: #3b425b;
+    }
+
+    .btn-gh {
+      background: #24292e;
+      border: 1px solid #3d444d;
+      color: #f0f6fc;
+      font-size: 0.82rem;
+      padding: 7px 13px;
+    }
+
+    .btn-gh:hover {
+      background: #2f363d;
+      border-color: #586069;
+    }
+
+    .btn-gh svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--card-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 9px;
+      padding: 10px 14px;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 0 3px var(--accent-purple-glow);
+    }
+
+    .form-control-mono {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+    }
+
+    textarea.form-control {
+      min-height: 100px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 580px) {
+      .row-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hint-text {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--card-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 9px;
+      margin-bottom: 18px;
+    }
+
+    .toggle-label-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .toggle-label-desc {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #2a2e42;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-purple);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Live Release Status Box (Right Column) */
+    .live-card {
+      background: linear-gradient(180deg, #131522 0%, #10121c 100%);
+      border: 1px solid #282d44;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      margin-bottom: 10px;
+    }
+
+    .live-ver-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .live-tag {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.1);
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .live-changelog {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 12px;
+      max-height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-family: var(--font-mono);
+      margin-bottom: 12px;
+    }
+
+    .live-links-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .live-link-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: var(--card-subtle);
+      border-radius: 6px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .live-link-item strong {
+      color: #e2e8f0;
+      min-width: 65px;
+    }
+
+    .live-link-item a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+
+    .live-link-item a:hover {
+      text-decoration: underline;
+    }
+
+    /* Toast Notification */
+    #toastNotification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #181b2a;
+      border: 1px solid var(--accent-purple);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      padding: 14px 20px;
+      border-radius: 10px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.88rem;
+      z-index: 9999;
+      transform: translateY(120px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #toastNotification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    #toastNotification.toast-success {
+      border-color: var(--accent-emerald);
+    }
+
+    #toastNotification.toast-error {
+      border-color: var(--accent-rose);
+    }
+
+    /* GitHub Status Alert */
+    .gh-alert {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 18px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+    }
+
+    .gh-alert svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--accent-purple);
+      flex-shrink: 0;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+  <div class="ambient-glow-left"></div>
+
+  <!-- PIN Security Gate -->
+  <div id="pinLockModal">
+    <div class="pin-card">
+      <div class="pin-avatar">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h2 class="pin-title">Admin Authorization</h2>
+      <p class="pin-desc">Enter your 4-8 digit administrator PIN to manage updates and push broadcasts to RirDrop users.</p>
+      
+      <div class="pin-input-group">
+        <input type="password" id="adminPinInput" class="pin-input" placeholder="••••••••" autofocus autocomplete="current-password" />
+        <span id="pinError" class="pin-error">Incorrect PIN code. Try again.</span>
+      </div>
+
+      <button id="btnUnlock" class="btn btn-primary" style="width: 100%;">
+        Authenticate &amp; Enter
+      </button>
+      
+      <p class="hint-text" style="margin-top: 14px;">Default Developer PIN: <span style="font-family: var(--font-mono); color: #818cf8;">admin2026</span></p>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">RirDrop Admin Center</div>
+        <div class="brand-subtitle">Release &amp; Live Update Broadcast Engine</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="badge-status">
+        <div class="pulse-dot"></div>
+        <span>Cloud Sync Live</span>
+      </div>
+      <button id="btnLogout" class="btn-logout" title="Lock Admin Panel">Lock</button>
+    </div>
+  </header>
+
+  <!-- Dashboard -->
+  <main>
+    <div class="dashboard-grid">
+      <!-- Left Column: Update Dispatcher -->
+      <section>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              </svg>
+              Publish New Release Broadcast
+            </h2>
+            <div style="display: flex; gap: 8px;">
+              <button id="btnQuickSample" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 11px;">
+                ⚡ Fill Sample
+              </button>
+              <button id="btnFetchGitHub" class="btn btn-gh">
+                <svg viewBox="0 0 16 16" width="16" height="16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9 1.48 1.23.46.2 1.01.14 1.34.09 0 .68.01 1.24.01 1.42 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>
+                Sync GitHub
+              </button>
+            </div>
+          </div>
+
+          <div class="gh-alert">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              Target GitHub Repo: <strong style="color: #a5b4fc; font-family: var(--font-mono);">rirdev/RirDrop</strong>.
+              You can fetch release assets from GitHub or paste links from Dropbox, your own CDN, or direct download links.
+            </div>
+          </div>
+
+          <form id="releaseForm">
+            <div class="row-2">
+              <div class="form-group">
+                <label class="form-label" for="relVersion">New Version *</label>
+                <input type="text" id="relVersion" class="form-control form-control-mono" placeholder="e.g. 1.1.0" required />
+                <div class="hint-text">Semantic version format (e.g. 1.0.1, 1.1.0)</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="relTitle">Release Title</label>
+                <input type="text" id="relTitle" class="form-control" placeholder="e.g. RirDrop v1.1.0 - Next-Gen Performance" />
+                <div class="hint-text">Friendly banner title shown to users</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="relChangelog">Changelog &amp; Release Highlights</label>
+              <textarea id="relChangelog" class="form-control" placeholder="• Added automatic background update notification&#10;• New Obsidian UI theme optimizations&#10;• Faster LAN discovery and video streaming"></textarea>
+              <div class="hint-text">Bullet points explaining what is new</div>
+            </div>
+
+            <!-- Download Links by Platform -->
+            <div class="form-group">
+              <label class="form-label" for="linkWindows">Windows Installer URL (.exe)</label>
+              <input type="url" id="linkWindows" class="form-control form-control-mono" placeholder="https://github.com/rirdev/RirDrop/releases/download/v1.1.0/RirDrop-Setup-1.1.0.exe" />
+            </div>
+
+            <div class="row-2">
+              <div class="form-group">
+                <label class="form-label" for="linkAndroid">Android APK URL (.apk)</label>
+                <input type="url" id="linkAndroid" class="form-control form-control-mono" placeholder="https://github.com/rirdev/RirDrop/releases/download/v1.1.0/RirDrop-1.1.0.apk" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="linkLinux">Linux Installer URL (.AppImage / .deb)</label>
+                <input type="url" id="linkLinux" class="form-control form-control-mono" placeholder="https://github.com/rirdev/RirDrop/releases/download/v1.1.0/RirDrop-1.1.0.AppImage" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="linkFallback">General Fallback URL (Optional)</label>
+              <input type="url" id="linkFallback" class="form-control form-control-mono" placeholder="https://github.com/rirdev/RirDrop/releases/latest" />
+              <div class="hint-text">Used if the user is on an OS without a dedicated package link above</div>
+            </div>
+
+            <div class="toggle-container">
+              <div>
+                <div class="toggle-label-title">Force Immediate Update</div>
+                <div class="toggle-label-desc">Strict mode: If disabled (recommended), users receive a friendly dismissible reminder.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="forceUpdateToggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div style="margin-top: 24px;">
+              <button type="submit" id="btnPublish" class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 13px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Publish &amp; Broadcast Update to All Devices
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Right Column: Current Active Broadcast -->
+      <aside>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Live Cloud Status
+            </h3>
+            <button id="btnRefreshLive" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.72rem;" title="Refresh status">
+              ↻ Refresh
+            </button>
+          </div>
+
+          <div id="liveStatusContainer">
+            <div class="live-card">
+              <span class="live-badge">Current Broadcast</span>
+              <div class="live-ver-title">
+                <span id="liveTitleDisplay">Loading...</span>
+                <span id="liveTagDisplay" class="live-tag">v--</span>
+              </div>
+              <div id="liveChangelogDisplay" class="live-changelog">Connecting to cloud broadcast channel...</div>
+              
+              <div class="live-links-list">
+                <div class="live-link-item">
+                  <strong>Windows:</strong>
+                  <span id="liveWinLink">-</span>
+                </div>
+                <div class="live-link-item">
+                  <strong>Android:</strong>
+                  <span id="liveAndroidLink">-</span>
+                </div>
+                <div class="live-link-item">
+                  <strong>Linux:</strong>
+                  <span id="liveLinuxLink">-</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="hint-text" style="line-height: 1.4;">
+              Active devices running RirDrop automatically query this channel upon opening and listen via real-time WebSocket/Cloud pushes.
+            </p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: #cbd5e1;">Admin Tips &amp; Best Practices</h4>
+          <ul style="font-size: 0.8rem; color: var(--text-muted); padding-left: 18px; display: flex; flex-direction: column; gap: 8px;">
+            <li><strong>Non-Intrusive:</strong> Users are prompted with a dismissible modal and can click "Remind Me Later".</li>
+            <li><strong>Settings Visibility:</strong> Users can also check for updates manually at any time under Settings &rarr; About RirDrop.</li>
+            <li><strong>Any Host:</strong> You can host files on GitHub Releases, Dropbox public links, or any direct HTTPS file link.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification">
+    <span id="toastMessage">Update broadcast published successfully!</span>
+  </div>
+
+  <script>
+    // State
+    const ADMIN_STORAGE_KEY = 'rirdrop_admin_session_pin';
+    let currentAdminPin = localStorage.getItem(ADMIN_STORAGE_KEY) || '';
+
+    // DOM Elements
+    const pinLockModal = document.getElementById('pinLockModal');
+    const adminPinInput = document.getElementById('adminPinInput');
+    const btnUnlock = document.getElementById('btnUnlock');
+    const pinError = document.getElementById('pinError');
+    const btnLogout = document.getElementById('btnLogout');
+    const releaseForm = document.getElementById('releaseForm');
+    const btnQuickSample = document.getElementById('btnQuickSample');
+    const btnFetchGitHub = document.getElementById('btnFetchGitHub');
+    const btnRefreshLive = document.getElementById('btnRefreshLive');
+    const toastNotification = document.getElementById('toastNotification');
+    const toastMessage = document.getElementById('toastMessage');
+
+    // Live display elements
+    const liveTitleDisplay = document.getElementById('liveTitleDisplay');
+    const liveTagDisplay = document.getElementById('liveTagDisplay');
+    const liveChangelogDisplay = document.getElementById('liveChangelogDisplay');
+    const liveWinLink = document.getElementById('liveWinLink');
+    const liveAndroidLink = document.getElementById('liveAndroidLink');
+    const liveLinuxLink = document.getElementById('liveLinuxLink');
+
+    // Init & Auth Check
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('pin') === 'admin2026' || window.location.hash === '#admin2026') {
+      currentAdminPin = 'admin2026';
+      localStorage.setItem(ADMIN_STORAGE_KEY, 'admin2026');
+    }
+
+    if (currentAdminPin === 'admin2026') {
+      pinLockModal.style.display = 'none';
+      fetchCurrentLiveRelease();
+    } else {
+      pinLockModal.style.display = 'flex';
+      adminPinInput.focus();
+    }
+
+    // Unlock PIN
+    btnUnlock.addEventListener('click', handleUnlock);
+    adminPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleUnlock();
+    });
+
+    function handleUnlock() {
+      const entered = adminPinInput.value.trim();
+      if (entered === 'admin2026') {
+        currentAdminPin = entered;
+        localStorage.setItem(ADMIN_STORAGE_KEY, entered);
+        pinLockModal.style.display = 'none';
+        pinError.style.display = 'none';
+        showToast('Authenticated as Administrator', 'success');
+        fetchCurrentLiveRelease();
+      } else {
+        pinError.style.display = 'block';
+        adminPinInput.value = '';
+        adminPinInput.focus();
+      }
+    }
+
+    // Logout
+    btnLogout.addEventListener('click', () => {
+      localStorage.removeItem(ADMIN_STORAGE_KEY);
+      currentAdminPin = '';
+      pinLockModal.style.display = 'flex';
+      adminPinInput.value = '';
+      adminPinInput.focus();
+    });
+
+    // Quick Sample Helper
+    btnQuickSample.addEventListener('click', () => {
+      document.getElementById('relVersion').value = '1.1.0';
+      document.getElementById('relTitle').value = 'RirDrop v1.1.0 - Next-Gen Performance & Updates';
+      document.getElementById('relChangelog').value = 
+        '• Automatic update notifications with dismissible "Remind Me Later"\n' +
+        '• Enhanced offline LAN transfer speeds with streaming buffer engine\n' +
+        '• User custom name customization & Monogram display\n' +
+        '• Full Settings update checker and live changelog viewer';
+      document.getElementById('linkWindows').value = 'https://github.com/rirdev/RirDrop/releases/download/v1.1.0/RirDrop-Setup-1.1.0.exe';
+      document.getElementById('linkAndroid').value = 'https://github.com/rirdev/RirDrop/releases/download/v1.1.0/RirDrop-1.1.0.apk';
+      document.getElementById('linkLinux').value = 'https://github.com/rirdev/RirDrop/releases/download/v1.1.0/RirDrop-1.1.0.AppImage';
+      document.getElementById('linkFallback').value = 'https://github.com/rirdev/RirDrop/releases/latest';
+      showToast('Sample update payload loaded!', 'success');
+    });
+
+    // Sync from GitHub
+    btnFetchGitHub.addEventListener('click', async () => {
+      btnFetchGitHub.textContent = '⏳ Querying...';
+      try {
+        const res = await fetch('/api/admin/fetch-github-release');
+        const json = await res.json();
+        if (json.success && json.release) {
+          const r = json.release;
+          document.getElementById('relVersion').value = r.version;
+          document.getElementById('relTitle').value = r.title || `RirDrop v${r.version}`;
+          document.getElementById('relChangelog').value = r.changelog || '';
+          if (r.downloads) {
+            if (r.downloads.windows) document.getElementById('linkWindows').value = r.downloads.windows;
+            if (r.downloads.android) document.getElementById('linkAndroid').value = r.downloads.android;
+            if (r.downloads.linux_appimage || r.downloads.linux_deb) {
+              document.getElementById('linkLinux').value = r.downloads.linux_appimage || r.downloads.linux_deb;
+            }
+          }
+          if (r.htmlUrl) document.getElementById('linkFallback').value = r.htmlUrl;
+          showToast(`Synced GitHub release v${r.version}!`, 'success');
+        } else {
+          showToast('No published GitHub releases found yet on rirdev/RirDrop. You can publish via manual fields below.', 'error');
+        }
+      } catch (err) {
+        showToast('Error querying GitHub API: ' + err.message, 'error');
+      } finally {
+        btnFetchGitHub.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9 1.48 1.23.46.2 1.01.14 1.34.09 0 .68.01 1.24.01 1.42 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg> Sync GitHub`;
+      }
+    });
+
+    // Form Submit: Broadcast Update
+    releaseForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const version = document.getElementById('relVersion').value.trim();
+      const title = document.getElementById('relTitle').value.trim() || `RirDrop v${version}`;
+      const changelog = document.getElementById('relChangelog').value.trim();
+      const windowsUrl = document.getElementById('linkWindows').value.trim();
+      const androidUrl = document.getElementById('linkAndroid').value.trim();
+      const linuxUrl = document.getElementById('linkLinux').value.trim();
+      const downloadUrl = document.getElementById('linkFallback').value.trim() || windowsUrl || androidUrl || linuxUrl;
+      const forceUpdate = document.getElementById('forceUpdateToggle').checked;
+
+      const btnPublish = document.getElementById('btnPublish');
+      const originalText = btnPublish.innerHTML;
+      btnPublish.disabled = true;
+      btnPublish.innerHTML = 'Broadcasting update to cloud...';
+
+      try {
+        const response = await fetch('/api/admin/publish-release', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pin: currentAdminPin,
+            version,
+            title,
+            changelog,
+            windowsUrl,
+            androidUrl,
+            linuxUrl,
+            downloadUrl,
+            forceUpdate
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showToast(`🚀 Update v${version} successfully broadcasted to all devices!`, 'success');
+          fetchCurrentLiveRelease();
+        } else {
+          showToast(`Broadcast failed: ${data.error || 'Server error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Network error: ${err.message}`, 'error');
+      } finally {
+        btnPublish.disabled = false;
+        btnPublish.innerHTML = originalText;
+      }
+    });
+
+    // Refresh Current Live Status
+    btnRefreshLive.addEventListener('click', fetchCurrentLiveRelease);
+
+    async function fetchCurrentLiveRelease() {
+      try {
+        const res = await fetch('/api/admin/check-release');
+        const data = await res.json();
+        if (data && data.release && data.release.version) {
+          const r = data.release;
+          liveTitleDisplay.textContent = r.title || `RirDrop v${r.version}`;
+          liveTagDisplay.textContent = `v${r.version}`;
+          liveChangelogDisplay.textContent = r.changelog || 'No release notes provided.';
+          
+          formatLink(liveWinLink, r.windowsUrl || (r.downloads && r.downloads.windows));
+          formatLink(liveAndroidLink, r.androidUrl || (r.downloads && r.downloads.android));
+          formatLink(liveLinuxLink, r.linuxUrl || (r.downloads && (r.downloads.linux_appimage || r.downloads.linux_deb)));
+        } else {
+          liveTitleDisplay.textContent = 'No Active Broadcast';
+          liveTagDisplay.textContent = 'v0.0.0';
+          liveChangelogDisplay.textContent = 'No update has been broadcasted yet. Fill the form to broadcast your first release.';
+        }
+      } catch (err) {
+        liveTitleDisplay.textContent = 'Status Offline';
+        liveChangelogDisplay.textContent = 'Unable to connect to broadcast service: ' + err.message;
+      }
+    }
+
+    function formatLink(el, url) {
+      if (url) {
+        el.innerHTML = `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+      } else {
+        el.textContent = 'None';
+      }
+    }
+
+    function showToast(msg, type = 'success') {
+      toastMessage.textContent = msg;
+      toastNotification.className = 'show ' + (type === 'success' ? 'toast-success' : 'toast-error');
+      setTimeout(() => {
+        toastNotification.className = '';
+      }, 4000);
+    }
+  </script>
+</body>
+</html>
