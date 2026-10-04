@@ -65,6 +65,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val folderPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+            viewModel.addSharedFolder(this, uri)
+        }
+    }
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {}
@@ -80,7 +94,8 @@ class MainActivity : ComponentActivity() {
             RirDropApp(
                 viewModel = viewModel,
                 onScanQrClicked = { launchQrScanner() },
-                onPickFilesClicked = { launchFilePicker() }
+                onPickFilesClicked = { launchFilePicker() },
+                onPickFolderClicked = { launchFolderPicker() }
             )
         }
     }
@@ -138,6 +153,10 @@ class MainActivity : ComponentActivity() {
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         }
         filePickerLauncher.launch(intent)
+    }
+
+    fun launchFolderPicker() {
+        folderPickerLauncher.launch(null)
     }
 
     private fun resolveUriToSharedItem(uri: Uri): SharedItem? {

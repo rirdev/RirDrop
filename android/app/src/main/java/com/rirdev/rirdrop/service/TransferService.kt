@@ -45,11 +45,12 @@ class TransferService : Service() {
             ACTION_START_DOWNLOAD -> {
                 val url = intent.getStringExtra(EXTRA_URL) ?: return START_NOT_STICKY
                 val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: "downloaded_file"
+                val taskId = "dl_${System.currentTimeMillis()}_${fileName.hashCode()}"
                 startForegroundNotification("Downloading $fileName...", 0)
                 wakeLock?.acquire(30 * 60 * 1000L) // 30 min max
 
                 scope.launch {
-                    downloadFile(url, fileName)
+                    downloadFile(taskId, url, fileName)
                 }
             }
             ACTION_STOP -> {
@@ -59,19 +60,22 @@ class TransferService : Service() {
         return START_NOT_STICKY
     }
 
-    private suspend fun downloadFile(url: String, fileName: String) {
+    private suspend fun downloadFile(taskId: String, url: String, fileName: String) {
         try {
             val request = Request.Builder().url(url).build()
             val response = httpClient.newCall(request).execute()
 
             if (!response.isSuccessful) {
-                updateNotification("Download failed: HTTP ${response.code}", 0, false)
+                val err = "HTTP ${response.code}"
+                updateNotification("Download failed: $err", 0, false)
+                TransferProgressManager.markFailed(taskId, err)
                 delay(3000)
                 stopForegroundService()
                 return
             }
 
             val body = response.body ?: run {
+                TransferProgressManager.markFailed(taskId, "Empty response")
                 stopForegroundService()
                 return
             }
@@ -85,36 +89,56 @@ class TransferService : Service() {
             val totalBytes = body.contentLength()
             var downloadedBytes = 0L
 
+            TransferProgressManager.updateProgress(taskId, fileName, 0L, totalBytes, "Starting...")
+
             body.byteStream().use { input ->
                 FileOutputStream(destFile).use { output ->
                     val buffer = ByteArray(32 * 1024)
                     var read: Int
                     var lastUpdate = System.currentTimeMillis()
+                    var lastBytes = 0L
 
                     while (input.read(buffer).also { read = it } != -1) {
                         output.write(buffer, 0, read)
                         downloadedBytes += read
 
                         val now = System.currentTimeMillis()
-                        if (now - lastUpdate > 500) {
+                        if (now - lastUpdate >= 400) {
+                            val timeDeltaSec = (now - lastUpdate) / 1000.0
+                            val bytesDelta = downloadedBytes - lastBytes
+                            val speedVal = if (timeDeltaSec > 0) (bytesDelta / timeDeltaSec).toLong() else 0L
+                            val speedStr = formatSpeed(speedVal)
+
                             lastUpdate = now
+                            lastBytes = downloadedBytes
+
                             val pct = if (totalBytes > 0) ((downloadedBytes * 100) / totalBytes).toInt() else -1
                             val mbDownloaded = downloadedBytes / (1024 * 1024)
                             val mbTotal = totalBytes / (1024 * 1024)
                             updateNotification("Downloading $fileName (${mbDownloaded}MB / ${mbTotal}MB)", pct, true)
+
+                            TransferProgressManager.updateProgress(taskId, fileName, downloadedBytes, totalBytes, speedStr)
                         }
                     }
                 }
             }
 
+            TransferProgressManager.markFinished(taskId, fileName)
             updateNotification("Saved $fileName to Downloads/RirDrop", 100, false)
-            delay(2000)
+            delay(1500)
         } catch (e: Exception) {
+            TransferProgressManager.markFailed(taskId, e.message ?: "Failed")
             updateNotification("Download error: ${e.message}", 0, false)
             delay(3000)
         } finally {
             stopForegroundService()
         }
+    }
+
+    private fun formatSpeed(bytesPerSec: Long): String {
+        if (bytesPerSec <= 0) return "0.0 MB/s"
+        val mbps = bytesPerSec.toDouble() / (1024.0 * 1024.0)
+        return String.format(java.util.Locale.US, "%.1f MB/s", mbps)
     }
 
     private fun startForegroundNotification(text: String, progress: Int) {

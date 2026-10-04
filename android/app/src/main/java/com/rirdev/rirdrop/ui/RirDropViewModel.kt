@@ -18,6 +18,8 @@ import com.rirdev.rirdrop.network.NetworkUtils
 import com.rirdev.rirdrop.network.PeerDevice
 import com.rirdev.rirdrop.server.LocalHttpServer
 import com.rirdev.rirdrop.server.SharedItem
+import com.rirdev.rirdrop.server.SharedFolderItem
+import androidx.documentfile.provider.DocumentFile
 import com.rirdev.rirdrop.service.TransferService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -84,6 +86,14 @@ data class PcSharedFolder(
     val name: String,
     val path: String,
     val previewThumb: String? = null
+)
+
+data class PhoneSharedFolder(
+    val id: String,
+    val name: String,
+    val uri: Uri,
+    val path: String = "",
+    val fileCount: Int = 0
 )
 
 data class PcFolderItem(
@@ -233,9 +243,12 @@ class RirDropViewModel : ViewModel() {
 
     private var approvalPollingJob: Job? = null
 
-    // 5. Shared Files (Phone Host & PC Synced)
+    // 5. Shared Files & Folders (Phone Host & PC Synced)
     private val _sharedFiles = MutableStateFlow<List<SharedItem>>(emptyList())
     val sharedFiles: StateFlow<List<SharedItem>> = _sharedFiles.asStateFlow()
+
+    private val _phoneSharedFolders = MutableStateFlow<List<PhoneSharedFolder>>(emptyList())
+    val phoneSharedFolders: StateFlow<List<PhoneSharedFolder>> = _phoneSharedFolders.asStateFlow()
 
     private val _pcQuickDropFiles = MutableStateFlow<List<PcQuickDropFile>>(emptyList())
     val pcQuickDropFiles: StateFlow<List<PcQuickDropFile>> = _pcQuickDropFiles.asStateFlow()
@@ -409,6 +422,10 @@ class RirDropViewModel : ViewModel() {
     fun attachEngines(discovery: DiscoveryEngine, server: LocalHttpServer?) {
         this.discoveryEngine = discovery
         this.httpServer = server
+        httpServer?.setSharedItems(_sharedFiles.value)
+        httpServer?.setSharedFolders(_phoneSharedFolders.value.map {
+            SharedFolderItem(it.id, it.name, it.uri, it.path, it.fileCount)
+        })
     }
 
     fun selectTab(tab: NavTab) {
@@ -796,6 +813,7 @@ class RirDropViewModel : ViewModel() {
         _sharedFiles.value = current
         httpServer?.setSharedItems(current)
         showMessage("Added ${items.size} file(s) to Quick Drop!")
+        notifyPcOfPhoneShares()
     }
 
     fun removeSharedFile(item: SharedItem) {
@@ -803,12 +821,121 @@ class RirDropViewModel : ViewModel() {
         current.removeAll { it.id == item.id }
         _sharedFiles.value = current
         httpServer?.setSharedItems(current)
+        notifyPcOfPhoneShares()
     }
 
     fun clearAllSharedFiles() {
         _sharedFiles.value = emptyList()
         httpServer?.setSharedItems(emptyList())
         showMessage("Cleared Quick Drop files")
+        notifyPcOfPhoneShares()
+    }
+
+    // Shared Folders (Phone to PC Stream Access)
+    fun addSharedFolder(context: Context, treeUri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val doc = DocumentFile.fromTreeUri(context, treeUri)
+                val name = doc?.name ?: "Shared Folder"
+                val count = doc?.listFiles()?.size ?: 0
+                val path = treeUri.lastPathSegment ?: treeUri.toString()
+                val id = "f_" + UUID.randomUUID().toString().substring(0, 8)
+
+                val folder = PhoneSharedFolder(
+                    id = id,
+                    name = name,
+                    uri = treeUri,
+                    path = path,
+                    fileCount = count
+                )
+
+                val current = _phoneSharedFolders.value.toMutableList()
+                current.add(folder)
+                _phoneSharedFolders.value = current
+
+                httpServer?.addSharedFolder(
+                    SharedFolderItem(
+                        id = folder.id,
+                        name = folder.name,
+                        treeUri = folder.uri,
+                        path = folder.path,
+                        fileCount = folder.fileCount
+                    )
+                )
+
+                showMessage("Shared folder: $name ($count files)")
+                notifyPcOfPhoneShares()
+            } catch (e: Exception) {
+                showMessage("Failed to share folder: ${e.message}")
+            }
+        }
+    }
+
+    fun removeSharedFolder(folder: PhoneSharedFolder) {
+        val current = _phoneSharedFolders.value.toMutableList()
+        current.removeAll { it.id == folder.id }
+        _phoneSharedFolders.value = current
+        httpServer?.removeSharedFolder(folder.id)
+        showMessage("Removed folder: ${folder.name}")
+        notifyPcOfPhoneShares()
+    }
+
+    fun clearAllSharedFolders() {
+        _phoneSharedFolders.value = emptyList()
+        httpServer?.setSharedFolders(emptyList())
+        showMessage("Cleared shared folders")
+        notifyPcOfPhoneShares()
+    }
+
+    private fun notifyPcOfPhoneShares() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val targetPc = _activePairedPc.value
+            val peer = _discoveredPeers.value.firstOrNull { it.os.contains("win", true) || it.os.contains("linux", true) || it.os.contains("mac", true) }
+            val ip = targetPc?.ip ?: peer?.ip ?: return@launch
+            val pcPort = targetPc?.port ?: peer?.httpPort ?: 53318
+
+            try {
+                val qdArr = JSONArray()
+                for (f in _sharedFiles.value) {
+                    qdArr.put(JSONObject().apply {
+                        put("id", f.id)
+                        put("name", f.name)
+                        put("size", f.size)
+                        put("sizeFormatted", formatBytes(f.size))
+                        put("mimeType", f.mimeType)
+                        put("streamUrl", "http://${_localIp.value}:$port/api/stream?fileId=${f.id}")
+                        put("downloadUrl", "http://${_localIp.value}:$port/api/download?fileId=${f.id}")
+                    })
+                }
+
+                val foldersArr = JSONArray()
+                for (f in _phoneSharedFolders.value) {
+                    foldersArr.put(JSONObject().apply {
+                        put("id", f.id)
+                        put("name", f.name)
+                        put("path", f.path)
+                        put("fileCount", f.fileCount)
+                        put("browseUrl", "http://${_localIp.value}:$port/api/shared?folderId=${f.id}")
+                    })
+                }
+
+                val payload = JSONObject().apply {
+                    put("type", "phone_shares_update")
+                    put("phoneAlias", NetworkUtils.getDeviceName())
+                    put("phoneIp", _localIp.value)
+                    put("phonePort", port)
+                    put("quickDropFiles", qdArr)
+                    put("sharedFolders", foldersArr)
+                }
+
+                val reqBody = payload.toString().toRequestBody("application/json".toMediaType())
+                val req = Request.Builder()
+                    .url("http://$ip:$pcPort/api/phone-shares")
+                    .post(reqBody)
+                    .build()
+                httpClient.newCall(req).execute().close()
+            } catch (_: Exception) {}
+        }
     }
 
     // Generate pairing QR code bitmap for phone screen

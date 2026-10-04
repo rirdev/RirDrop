@@ -99,6 +99,7 @@ fun StorageStreamScreen(
     val pcFolderItems by viewModel.pcFolderItems.collectAsState()
     val isBrowsingFolderLoading by viewModel.isBrowsingFolderLoading.collectAsState()
     val sharedFiles by viewModel.sharedFiles.collectAsState()
+    val phoneSharedFolders by viewModel.phoneSharedFolders.collectAsState()
 
     var showManualConnectDialog by remember { mutableStateOf(false) }
 
@@ -453,7 +454,7 @@ fun StorageStreamScreen(
                     )
                 }
 
-                if (sharedFiles.isEmpty()) {
+                if (sharedFiles.isEmpty() && phoneSharedFolders.isEmpty()) {
                     item {
                         Card(
                             modifier = Modifier
@@ -463,7 +464,7 @@ fun StorageStreamScreen(
                             colors = CardDefaults.cardColors(containerColor = CardMatteDark)
                         ) {
                             Text(
-                                text = "No phone files currently shared. Go to Quick Drop to share files.",
+                                text = "No phone folders or files currently shared. Go to Quick Drop to share folders or files for PC streaming.",
                                 modifier = Modifier.padding(16.dp),
                                 fontSize = 12.sp,
                                 color = TextMuted
@@ -471,6 +472,48 @@ fun StorageStreamScreen(
                         }
                     }
                 } else {
+                    // Shared Folders
+                    items(phoneSharedFolders) { folder ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, StreamCyan.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceDark)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FolderShared,
+                                    contentDescription = "Folder",
+                                    tint = StreamCyan,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = folder.name,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "Serving Folder • ${folder.fileCount} files • 2-Way PC Stream",
+                                        fontSize = 11.sp,
+                                        color = StreamCyan
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Shared Files
                     items(sharedFiles) { file ->
                         Card(
                             modifier = Modifier
@@ -486,9 +529,9 @@ fun StorageStreamScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Folder,
-                                    contentDescription = "Folder",
-                                    tint = BrandGold,
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = "File",
+                                    tint = NeonLime,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))

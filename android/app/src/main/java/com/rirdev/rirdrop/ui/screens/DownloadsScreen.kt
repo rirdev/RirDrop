@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
@@ -43,6 +44,10 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import com.rirdev.rirdrop.service.ActiveDownloadTask
+import com.rirdev.rirdrop.service.TransferProgressManager
+import com.rirdev.rirdrop.ui.components.M3WavyLinearProgressIndicator
+import com.rirdev.rirdrop.ui.theme.StatusOnline
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -87,10 +92,17 @@ fun DownloadsScreen(
 ) {
     val context = LocalContext.current
     val downloadedFiles by viewModel.downloadedFiles.collectAsState()
+    val activeDownloads by TransferProgressManager.activeDownloads.collectAsState()
     var fileToDelete by remember { mutableStateOf<DownloadedFileItem?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshDownloadedFiles(context)
+    }
+
+    LaunchedEffect(activeDownloads) {
+        if (activeDownloads.any { it.isFinished }) {
+            viewModel.refreshDownloadedFiles(context)
+        }
     }
 
     Column(
@@ -136,7 +148,53 @@ fun DownloadsScreen(
             }
         }
 
-        if (downloadedFiles.isEmpty()) {
+        // Active Downloads Section (Animated)
+        if (activeDownloads.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 14.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = CardMatteDark),
+                border = BorderStroke(1.dp, CardMatteDarkBorder)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Active Downloads (${activeDownloads.size})",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = NeonLime.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "DOWNLOADING",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                color = NeonLime,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    activeDownloads.forEach { task ->
+                        ActiveDownloadTaskCard(task = task, viewModel = viewModel)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+
+        if (downloadedFiles.isEmpty() && activeDownloads.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -329,6 +387,88 @@ private fun DownloadedFileCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ActiveDownloadTaskCard(
+    task: ActiveDownloadTask,
+    viewModel: RirDropViewModel
+) {
+    val downloadedFormatted = viewModel.formatBytes(task.bytesDownloaded)
+    val totalFormatted = if (task.totalBytes > 0) viewModel.formatBytes(task.totalBytes) else "..."
+    val percentInt = (task.progress * 100).toInt()
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFF161922),
+        border = BorderStroke(1.dp, if (task.isFinished) StatusOnline.copy(alpha = 0.4f) else BorderSubtle),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(if (task.isFinished) StatusOnline.copy(alpha = 0.15f) else NeonLime.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (task.isFinished) Icons.Default.CheckCircle else Icons.Default.Download,
+                            contentDescription = null,
+                            tint = if (task.isFinished) StatusOnline else NeonLime,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = task.fileName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (task.isFinished) "✔ Saved to /Download/RirDrop" else "$downloadedFormatted / $totalFormatted • ${task.speedFormatted}",
+                            fontSize = 11.sp,
+                            color = if (task.isFinished) StatusOnline else TextMuted
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (task.isFinished) "Done" else "$percentInt%",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.sp,
+                    color = if (task.isFinished) StatusOnline else NeonLime
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            M3WavyLinearProgressIndicator(
+                progress = { task.progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp),
+                color = if (task.isFinished) StatusOnline else NeonLime,
+                trackColor = Color(0xFF262C38)
+            )
         }
     }
 }

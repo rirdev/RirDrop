@@ -63,7 +63,8 @@ import com.rirdev.rirdrop.ui.theme.TextSecondary
 fun RirDropApp(
     viewModel: RirDropViewModel,
     onScanQrClicked: () -> Unit,
-    onPickFilesClicked: () -> Unit
+    onPickFilesClicked: () -> Unit,
+    onPickFolderClicked: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isBooting by viewModel.isBooting.collectAsState()
@@ -145,7 +146,8 @@ fun RirDropApp(
                                 )
                                 NavTab.QUICK_DROP -> QuickDropScreen(
                                     viewModel = viewModel,
-                                    onPickFilesClicked = onPickFilesClicked
+                                    onPickFilesClicked = onPickFilesClicked,
+                                    onPickFolderClicked = onPickFolderClicked
                                 )
                                 NavTab.RADAR -> DevicesRadarScreen(
                                     viewModel = viewModel,

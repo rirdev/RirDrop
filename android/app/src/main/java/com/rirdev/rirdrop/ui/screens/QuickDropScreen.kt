@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.UploadFile
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rirdev.rirdrop.server.SharedItem
 import com.rirdev.rirdrop.ui.PcQuickDropFile
+import com.rirdev.rirdrop.ui.PhoneSharedFolder
 import com.rirdev.rirdrop.ui.RirDropViewModel
 import com.rirdev.rirdrop.ui.StreamMediaItem
 import com.rirdev.rirdrop.ui.theme.BgDark
@@ -84,15 +86,18 @@ import com.rirdev.rirdrop.ui.theme.TextSecondary
 @Composable
 fun QuickDropScreen(
     viewModel: RirDropViewModel,
-    onPickFilesClicked: () -> Unit
+    onPickFilesClicked: () -> Unit,
+    onPickFolderClicked: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sharedFiles by viewModel.sharedFiles.collectAsState()
+    val phoneSharedFolders by viewModel.phoneSharedFolders.collectAsState()
     val pcQuickDropFiles by viewModel.pcQuickDropFiles.collectAsState()
     val activePairedPc by viewModel.activePairedPc.collectAsState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("PC Files (${pcQuickDropFiles.size})", "Phone Drops (${sharedFiles.size})")
+    val totalPhoneShared = sharedFiles.size + phoneSharedFolders.size
+    val tabs = listOf("PC Files (${pcQuickDropFiles.size})", "Phone Drops ($totalPhoneShared)")
 
     Column(
         modifier = Modifier
@@ -242,121 +247,219 @@ fun QuickDropScreen(
         } else {
             // TAB 1: Phone Shares (Local host on :53318)
             Column(modifier = Modifier.weight(1f)) {
-                // Dropzone Box
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onPickFilesClicked() },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardPastelLime)
+                // Two Action Cards: Share Files & Share Folder
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(
+                    // 1. Pick Files Card
+                    Card(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .weight(1f)
+                            .clickable { onPickFilesClicked() },
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardPastelLime)
                     ) {
-                        Box(
+                        Column(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(CardPastelLimeText.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.UploadFile,
-                                contentDescription = "Upload",
-                                tint = CardPastelLimeText,
-                                modifier = Modifier.size(24.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(CardPastelLimeText.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.UploadFile,
+                                    contentDescription = "Upload Files",
+                                    tint = CardPastelLimeText,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Share Files",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = CardPastelLimeText
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Media, docs, APKs",
+                                fontSize = 10.sp,
+                                color = CardPastelLimeText.copy(alpha = 0.8f)
                             )
                         }
+                    }
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text(
-                            text = "Tap to Pick Files & Media",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 15.sp,
-                            color = CardPastelLimeText
-                        )
-
-                        Spacer(modifier = Modifier.height(3.dp))
-
-                        Text(
-                            text = "Hosts files on phone port 53318 for paired PC & peers",
-                            fontSize = 11.sp,
-                            color = CardPastelLimeText.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center
-                        )
+                    // 2. Pick Folder Card (for 2-Way PC Stream!)
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onPickFolderClicked() },
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2638)),
+                        border = BorderStroke(1.dp, StreamCyan.copy(alpha = 0.4f))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(StreamCyan.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FolderShared,
+                                    contentDescription = "Share Folder",
+                                    tint = StreamCyan,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Share Folder",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = StreamCyan
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "2-Way PC Stream",
+                                fontSize = 10.sp,
+                                color = TextMuted
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Phone Shares (${sharedFiles.size})",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = TextPrimary
-                    )
-
-                    if (sharedFiles.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { viewModel.clearAllSharedFiles() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = "Clear All",
-                                tint = Color(0xFFEF4444),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Clear All",
-                                fontSize = 12.sp,
-                                color = Color(0xFFEF4444),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (sharedFiles.isEmpty()) {
+                // Shared Content Lists
+                if (phoneSharedFolders.isEmpty() && sharedFiles.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f),
+                            .weight(1f)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(SurfaceDark.copy(alpha = 0.5f))
+                            .border(1.dp, CardMatteDarkBorder, RoundedCornerShape(20.dp))
+                            .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "No files selected on phone yet.\nTap above to select files to share.",
-                            color = TextMuted,
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 19.sp
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonLime.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FolderShared,
+                                    contentDescription = "Share",
+                                    tint = NeonLime,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "No Phone Items Shared",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Tap 'Share Folder' above to allow your PC to browse and stream entire video/music folders from your phone, or 'Share Files' for individual items.",
+                                fontSize = 12.sp,
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 18.sp
+                            )
+                        }
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(sharedFiles, key = { it.id }) { item ->
-                            SharedItemCard(
-                                item = item,
-                                onRemove = { viewModel.removeSharedFile(item) }
-                            )
+                        // SECTION: Shared Folders
+                        if (phoneSharedFolders.isNotEmpty()) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Shared Folders (${phoneSharedFolders.size})",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = StreamCyan
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { viewModel.clearAllSharedFolders() }
+                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = "Clear Folders", fontSize = 11.sp, color = Color(0xFFEF4444))
+                                    }
+                                }
+                            }
+
+                            items(phoneSharedFolders, key = { it.id }) { folder ->
+                                PhoneSharedFolderCard(
+                                    folder = folder,
+                                    onRemove = { viewModel.removeSharedFolder(folder) }
+                                )
+                            }
+                        }
+
+                        // SECTION: Shared Files
+                        if (sharedFiles.isNotEmpty()) {
+                            item {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Shared Files (${sharedFiles.size})",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = NeonLime
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { viewModel.clearAllSharedFiles() }
+                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = "Clear Files", fontSize = 11.sp, color = Color(0xFFEF4444))
+                                    }
+                                }
+                            }
+
+                            items(sharedFiles, key = { it.id }) { item ->
+                                SharedItemCard(
+                                    item = item,
+                                    onRemove = { viewModel.removeSharedFile(item) }
+                                )
+                            }
                         }
                     }
                 }
@@ -565,6 +668,76 @@ fun SharedItemCard(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove",
+                    tint = TextMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PhoneSharedFolderCard(
+    folder: PhoneSharedFolder,
+    onRemove: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(StreamCyan.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FolderShared,
+                        contentDescription = "Folder",
+                        tint = StreamCyan,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(
+                        text = folder.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${folder.fileCount} files • 2-Way PC Stream",
+                        fontSize = 11.sp,
+                        color = StreamCyan
+                    )
+                }
+            }
+
+            IconButton(onClick = onRemove) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Remove Folder",
                     tint = TextMuted,
                     modifier = Modifier.size(18.dp)
                 )
