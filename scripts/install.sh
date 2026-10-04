@@ -27,6 +27,7 @@ echo "📂 Copying RirDrop files to $INSTALL_DIR..."
 # Copy source files (excluding git, tests, scratch)
 cp -r "$APP_SRC_DIR/src" "$INSTALL_DIR/"
 cp -r "$APP_SRC_DIR/assets" "$INSTALL_DIR/"
+cp -r "$APP_SRC_DIR/scripts" "$INSTALL_DIR/"
 cp -r "$APP_SRC_DIR/node_modules" "$INSTALL_DIR/"
 cp "$APP_SRC_DIR/package.json" "$INSTALL_DIR/"
 
@@ -34,6 +35,7 @@ cp "$APP_SRC_DIR/package.json" "$INSTALL_DIR/"
 echo "🎨 Registering app icons..."
 cp "$APP_SRC_DIR/assets/icon.png" "$ICON_DIR/rirdrop.png"
 cp "$APP_SRC_DIR/assets/icon.png" "$PIXMAPS_DIR/rirdrop.png"
+cp "$APP_SRC_DIR/assets/icon.png" "$HOME/.local/share/icons/rirdrop.png"
 
 # Create binary launcher wrapper in ~/.local/bin/rirdrop
 echo "🚀 Creating executable launcher in $BIN_DIR/rirdrop..."
