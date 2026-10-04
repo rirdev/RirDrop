@@ -2199,33 +2199,161 @@ canvas#transferChart {
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
-/* Settings Grid & Sections */
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: 20px;
+/* Settings Grid & Sections: Organized Minimized Accordion Stack */
+.settings-nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 16px;
 }
 
-@media (max-width: 960px) {
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
+.settings-chips-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-nav-chip {
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-nav-chip:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.settings-nav-chip.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.25));
+  color: #c7d2fe;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 .settings-section {
-  padding: 22px 24px;
+  padding: 0 !important;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.settings-section:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.settings-section.open {
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 16px rgba(99, 102, 241, 0.12);
 }
 
 .settings-section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 14px;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
 }
+
+.settings-section-header:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.settings-section-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-section-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-summary-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  letter-spacing: 0.03em;
+}
+
+.settings-chevron-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.settings-section.open .settings-chevron-icon {
+  transform: rotate(180deg);
+  color: var(--card-purple);
+}
+
+/* Collapsible Body */
+.settings-section:not(.open) .settings-rows {
+  display: none !important;
+}
+
+.settings-section.open .settings-rows {
+  display: flex !important;
+  flex-direction: column;
+  padding: 14px 22px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(10, 11, 16, 0.35);
+  animation: settingsExpand 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes settingsExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 .settings-section-icon {
   width: 36px;

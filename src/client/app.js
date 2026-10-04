@@ -315,6 +315,8 @@ async function initBackend() {
     }
     refreshAllData();
     refreshCloudSyncStatus();
+    initSettingsAccordion();
+    renderUpToDateStatus();
     checkSoftwareUpdatesSilently();
   } catch (err) {
     console.error('Failed to init backend:', err);
@@ -1731,6 +1733,7 @@ function applyTheme(theme) {
   if (btnDark) btnDark.classList.toggle('active', theme === 'dark');
   if (btnLight) btnLight.classList.toggle('active', theme === 'light');
   if (btnSys) btnSys.classList.toggle('active', theme === 'system');
+  if (typeof updateSettingsSummaryChips === 'function') updateSettingsSummaryChips();
 }
 
 function applyAccent(accent) {
@@ -2445,7 +2448,126 @@ if (btnSettingsResetDefaults) {
 
     playChime(true);
     showInfoModal('Reset to Defaults', '<p>Settings restored to default state: <b>Obsidian Dark Theme</b>, <b>JOHN DOE</b> profile identity, Neon Lime accent, and standard transfer rates.</p>');
+    if (typeof updateSettingsSummaryChips === 'function') updateSettingsSummaryChips();
   });
+}
+
+// ==============================================
+// SETTINGS ACCORDION & CATEGORY CONTROLLER
+// ==============================================
+function initSettingsAccordion() {
+  const sections = Array.from(document.querySelectorAll('.settings-section'));
+  const categoryChips = Array.from(document.querySelectorAll('.settings-nav-chip'));
+  const btnToggleAll = document.getElementById('btnToggleAllSections');
+
+  if (!sections.length) return;
+
+  function updateToggleAllButtonText() {
+    if (!btnToggleAll) return;
+    const allOpen = sections.length > 0 && sections.every(s => s.classList.contains('open'));
+    btnToggleAll.textContent = allOpen ? 'Collapse All' : 'Expand All';
+  }
+
+  // Toggle individual section when header is clicked
+  sections.forEach(section => {
+    const header = section.querySelector('.settings-section-header');
+    if (!header) return;
+
+    header.addEventListener('click', (e) => {
+      // Don't toggle if clicking an interactive element inside header
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+      
+      const isOpen = section.classList.contains('open');
+      if (isOpen) {
+        section.classList.remove('open');
+      } else {
+        section.classList.add('open');
+      }
+      updateToggleAllButtonText();
+    });
+  });
+
+  // Filter & Focus chips in the navigation bar
+  categoryChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      categoryChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+
+      const filter = chip.getAttribute('data-filter');
+      if (filter === 'all') {
+        sections.forEach(s => {
+          s.style.display = 'flex';
+        });
+      } else {
+        // Expand and focus the selected category, collapse others
+        sections.forEach(s => {
+          s.style.display = 'flex';
+          if (s.id === filter || s.getAttribute('data-category') === filter) {
+            s.classList.add('open');
+            setTimeout(() => {
+              s.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 50);
+          } else {
+            s.classList.remove('open');
+          }
+        });
+        updateToggleAllButtonText();
+      }
+    });
+  });
+
+  // Toggle All button
+  if (btnToggleAll) {
+    btnToggleAll.addEventListener('click', () => {
+      const anyClosed = sections.some(s => !s.classList.contains('open'));
+      if (anyClosed) {
+        sections.forEach(s => s.classList.add('open'));
+        btnToggleAll.textContent = 'Collapse All';
+      } else {
+        sections.forEach(s => s.classList.remove('open'));
+        btnToggleAll.textContent = 'Expand All';
+      }
+    });
+  }
+
+  updateToggleAllButtonText();
+  updateSettingsSummaryChips();
+}
+
+function updateSettingsSummaryChips() {
+  const chipTheme = document.getElementById('chipSummaryTheme');
+  if (chipTheme) {
+    const currentTheme = localStorage.getItem('rirdrop_theme') || 'dark';
+    chipTheme.textContent = currentTheme === 'light' ? 'Light Theme' : currentTheme === 'system' ? 'System Theme' : 'Dark Mode';
+  }
+
+  const maxConc = document.getElementById('settingMaxConcurrent');
+  const chipTransfers = document.getElementById('chipSummaryTransfers');
+  if (chipTransfers && maxConc) {
+    chipTransfers.textContent = `${maxConc.value} Concurrent`;
+  }
+
+  const chipNetwork = document.getElementById('chipSummaryNetwork');
+  if (chipNetwork) {
+    chipNetwork.textContent = 'UDP 53317 Active';
+  }
+
+  const chipSecurity = document.getElementById('chipSummarySecurity');
+  if (chipSecurity) {
+    const savedPin = localStorage.getItem('rirdrop_transfer_pin');
+    chipSecurity.textContent = savedPin ? 'PIN Protected' : 'Approval Required';
+  }
+
+  const notifSounds = document.getElementById('settingSoundEffects');
+  const chipNotifs = document.getElementById('chipSummaryNotifications');
+  if (chipNotifs && notifSounds) {
+    chipNotifs.textContent = notifSounds.checked ? 'Audio Enabled' : 'Audio Muted';
+  }
+
+  const chipStorage = document.getElementById('chipSummaryStorage');
+  if (chipStorage) {
+    chipStorage.textContent = 'Clean Cache';
+  }
 }
 
 // ----------------------------------------------------
@@ -2616,12 +2738,58 @@ const btnSettingsDownloadUpdate = document.getElementById('btnSettingsDownloadUp
 const settingsCurrentVersionText = document.getElementById('settingsCurrentVersionText');
 const btnCheckUpdates = document.getElementById('btnCheckUpdates');
 
+function renderUpToDateStatus(release) {
+  // Dismiss update modal if open
+  if (appUpdateModal) {
+    appUpdateModal.style.display = 'none';
+  }
+  // Hide orange indicator on sidebar
+  if (navUpdateDot) {
+    navUpdateDot.style.display = 'none';
+  }
+  // In Settings: hide the download card completely
+  if (settingsUpdateCard) {
+    settingsUpdateCard.style.display = 'none';
+  }
+  // In Settings: set badge to green UP TO DATE
+  if (settingsUpdateBadge) {
+    settingsUpdateBadge.style.display = 'inline-block';
+    settingsUpdateBadge.textContent = 'UP TO DATE';
+    settingsUpdateBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+    settingsUpdateBadge.style.color = '#34d399';
+    settingsUpdateBadge.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+  }
+  // Update About summary chip
+  const chipSummaryAbout = document.getElementById('chipSummaryAbout');
+  const targetVer = (release && (release.latestVersion || release.version || release.currentVersion)) || '1.0.0';
+  if (chipSummaryAbout) {
+    chipSummaryAbout.textContent = `v${targetVer} • Up to date`;
+    chipSummaryAbout.style.color = 'var(--accent-emerald, #34d399)';
+  }
+  if (settingsCurrentVersionText) {
+    const downloaded = localStorage.getItem('rirdrop_downloaded_release');
+    if (downloaded && downloaded !== '1.0.0') {
+      settingsCurrentVersionText.textContent = `v1.0.0 Stable (v${downloaded} downloaded • Up to date)`;
+    } else {
+      settingsCurrentVersionText.textContent = `v1.0.0 Stable (Electron • Node.js • Linux x64)`;
+    }
+  }
+}
+
 function showUpdateModal(release) {
   if (!release) return;
-  currentActiveRelease = release;
 
   const currentVer = release.currentVersion || '1.0.0';
   const newVer = release.latestVersion || release.version || '1.1.0';
+
+  // If this exact version was already downloaded by user, mark up-to-date and do not prompt
+  const downloadedVer = localStorage.getItem('rirdrop_downloaded_release');
+  if (downloadedVer && downloadedVer.replace(/^v/i, '') === String(newVer).replace(/^v/i, '')) {
+    renderUpToDateStatus(release);
+    return;
+  }
+
+  currentActiveRelease = release;
 
   if (updateCurrentVersionBadge) updateCurrentVersionBadge.textContent = `v${currentVer}`;
   if (updateNewVersionBadge) updateNewVersionBadge.textContent = `v${newVer}`;
@@ -2632,7 +2800,13 @@ function showUpdateModal(release) {
   if (navUpdateDot) navUpdateDot.style.display = 'block';
 
   // Update Settings View Card
-  if (settingsUpdateBadge) settingsUpdateBadge.style.display = 'inline-block';
+  if (settingsUpdateBadge) {
+    settingsUpdateBadge.style.display = 'inline-block';
+    settingsUpdateBadge.textContent = 'UPDATE AVAILABLE';
+    settingsUpdateBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+    settingsUpdateBadge.style.color = '#f59e0b';
+    settingsUpdateBadge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+  }
   if (settingsUpdateCard) {
     settingsUpdateCard.style.display = 'block';
     if (settingsAvailableVersionTag) settingsAvailableVersionTag.textContent = `v${newVer}`;
@@ -2649,7 +2823,7 @@ function showUpdateModal(release) {
       let linksHtml = '';
       if (winUrl) linksHtml += `<a href="${winUrl}" target="_blank" style="color:var(--accent-cyan,#06b6d4); text-decoration:none;">🪟 Windows (.exe)</a>`;
       if (apkUrl) linksHtml += `<a href="${apkUrl}" target="_blank" style="color:var(--accent-emerald,#10b981); text-decoration:none;">🤖 Android (.apk)</a>`;
-      if (lnxUrl) linksHtml += `<a href="${lnxUrl}" target="_blank" style="color:var(--card-lime,#bef264); text-decoration:none;">🐧 Linux (.AppImage)</a>`;
+      if (lnxUrl) linksHtml += `<a href="${lnxUrl}" target="_blank" style="color:var(--card-lime,#bef264); text-decoration:none;">🐧 Linux (.tar.gz)</a>`;
       if (release.downloadUrl && !winUrl && !apkUrl && !lnxUrl) {
         linksHtml += `<a href="${release.downloadUrl}" target="_blank" style="color:var(--card-yellow,#fde047); text-decoration:none;">🔗 Download Release</a>`;
       }
@@ -2677,17 +2851,30 @@ function handleDownloadUpdate() {
     return;
   }
 
+  const downloadedVer = currentActiveRelease.latestVersion || currentActiveRelease.version || '1.0.0';
+  localStorage.setItem('rirdrop_downloaded_release', downloadedVer);
+
   if (window.rirdropAPI && window.rirdropAPI.downloadUpdate) {
     window.rirdropAPI.downloadUpdate(targetUrl);
   } else {
     window.open(targetUrl, '_blank');
   }
 
-  dismissUpdateModal();
+  renderUpToDateStatus(currentActiveRelease);
+
   showInfoModal('Update Download Started', `
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+      <div style="width:40px; height:40px; border-radius:10px; background:rgba(16, 185, 129, 0.15); color:#34d399; display:flex; align-items:center; justify-content:center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div>
+        <div style="font-size:16px; font-weight:800; color:#fff;">Status: Up to Date</div>
+        <div style="font-size:12px; color:var(--text-secondary);">RirDrop v${downloadedVer} Download Initiated</div>
+      </div>
+    </div>
     <p>Opening download link in your browser:</p>
-    <p style="word-break:break-all; font-family:monospace; margin-top:8px; color:var(--card-yellow);">${targetUrl}</p>
-    <p style="margin-top:10px; font-size:12px; color:var(--text-secondary);">Run the downloaded installer when finished to complete the update.</p>
+    <p style="word-break:break-all; font-family:monospace; margin-top:8px; color:var(--card-yellow); font-size:12px;">${targetUrl}</p>
+    <p style="margin-top:10px; font-size:12px; color:var(--text-secondary);">The software has been marked as <b>Up to Date</b>. The download button will remain hidden until a newer release is published.</p>
   `);
 }
 
@@ -2726,9 +2913,16 @@ async function checkSoftwareUpdatesSilently() {
   if (!window.rirdropAPI || !window.rirdropAPI.checkForUpdates) return;
   try {
     const info = await window.rirdropAPI.checkForUpdates();
-    if (info && (info.available || (info.latestVersion && info.currentVersion && info.latestVersion !== info.currentVersion))) {
+    if (!info) return;
+
+    const downloadedVer = localStorage.getItem('rirdrop_downloaded_release');
+    const isDownloaded = downloadedVer && info.latestVersion && downloadedVer.replace(/^v/i, '') === String(info.latestVersion).replace(/^v/i, '');
+
+    if (info.available && !isDownloaded) {
       currentActiveRelease = info;
       showUpdateModal(info);
+    } else {
+      renderUpToDateStatus(info);
     }
   } catch (err) {
     console.warn('[Updates] Silent background check error:', err);
@@ -2740,6 +2934,12 @@ if (window.rirdropAPI && window.rirdropAPI.onUpdateAvailable) {
   window.rirdropAPI.onUpdateAvailable((release) => {
     console.log('[Updates] Real-time release broadcast received:', release);
     if (release && release.version) {
+      const downloadedVer = localStorage.getItem('rirdrop_downloaded_release');
+      if (downloadedVer && downloadedVer.replace(/^v/i, '') === String(release.version).replace(/^v/i, '')) {
+        console.log('[Updates] Release already downloaded by user, skipping modal.');
+        renderUpToDateStatus({ latestVersion: release.version });
+        return;
+      }
       const formatted = {
         available: true,
         currentVersion: '1.0.0',
@@ -2769,32 +2969,40 @@ if (btnCheckUpdates) {
     btnCheckUpdates.disabled = true;
     btnCheckUpdates.textContent = 'Checking...';
     try {
+      let info = null;
       if (window.rirdropAPI && window.rirdropAPI.checkForUpdates) {
-        const info = await window.rirdropAPI.checkForUpdates();
-        if (info && (info.available || (info.latestVersion && info.currentVersion && info.latestVersion !== info.currentVersion))) {
-          currentActiveRelease = info;
-          showUpdateModal(info);
-        } else {
-          showInfoModal('Software Update Status', `
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-              <div style="width:40px; height:40px; border-radius:10px; background:rgba(16, 185, 129, 0.15); color:#34d399; display:flex; align-items:center; justify-content:center;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <div>
-                <div style="font-size:16px; font-weight:800; color:#fff;">You are on the Latest Version</div>
-                <div style="font-size:12px; color:var(--text-secondary);">RirDrop v${(info && info.currentVersion) || '1.0.0'} Stable (Linux x64)</div>
-              </div>
-            </div>
-            <p>All core network libraries, discovery sockets, and security modules are up to date. No updates required at this time.</p>
-          `);
-        }
+        info = await window.rirdropAPI.checkForUpdates();
       } else {
         const res = await fetch('/api/admin/check-release');
         const data = await res.json();
         if (data && data.release && data.release.version) {
-          currentActiveRelease = { available: true, ...data.release, latestVersion: data.release.version };
-          showUpdateModal(currentActiveRelease);
+          info = { available: true, ...data.release, latestVersion: data.release.version };
         }
+      }
+
+      const downloadedVer = localStorage.getItem('rirdrop_downloaded_release');
+      const isDownloaded = downloadedVer && info && info.latestVersion && downloadedVer.replace(/^v/i, '') === String(info.latestVersion).replace(/^v/i, '');
+
+      if (info && info.available && !isDownloaded) {
+        currentActiveRelease = info;
+        showUpdateModal(info);
+      } else {
+        renderUpToDateStatus(info);
+        const ver = (info && (info.latestVersion || info.currentVersion)) || '1.0.0';
+        const note = isDownloaded ? `<p style="margin-top:10px; font-size:12px; color:var(--card-lime);">✓ Latest release v${ver} was already downloaded. Run the installer anytime to apply.</p>` : '';
+        showInfoModal('Software Update Status', `
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div style="width:40px; height:40px; border-radius:10px; background:rgba(16, 185, 129, 0.15); color:#34d399; display:flex; align-items:center; justify-content:center;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <div style="font-size:16px; font-weight:800; color:#fff;">You are Up to Date</div>
+              <div style="font-size:12px; color:var(--text-secondary);">RirDrop v${ver} Stable (Linux x64)</div>
+            </div>
+          </div>
+          <p>All core network libraries, discovery sockets, and security modules are running on the latest available release.</p>
+          ${note}
+        `);
       }
     } catch (err) {
       showInfoModal('Update Check Error', `<p>Could not check for updates: ${err.message}</p>`);

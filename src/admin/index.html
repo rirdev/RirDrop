@@ -975,9 +975,8 @@
           if (r.downloads) {
             if (r.downloads.windows) document.getElementById('linkWindows').value = r.downloads.windows;
             if (r.downloads.android) document.getElementById('linkAndroid').value = r.downloads.android;
-            if (r.downloads.linux_appimage || r.downloads.linux_deb) {
-              document.getElementById('linkLinux').value = r.downloads.linux_appimage || r.downloads.linux_deb;
-            }
+            const linuxLink = r.downloads.linux || r.downloads.linux_appimage || r.downloads.linux_deb;
+            if (linuxLink) document.getElementById('linkLinux').value = linuxLink;
           }
           if (r.htmlUrl) document.getElementById('linkFallback').value = r.htmlUrl;
           showToast(`Synced GitHub release v${r.version}!`, 'success');

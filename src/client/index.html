@@ -944,18 +944,69 @@
           </div>
         </div>
 
+        <!-- SETTINGS CATEGORY FILTER & ACCORDION TOOLBAR -->
+        <div class="settings-nav-bar">
+          <div class="settings-chips-group">
+            <button class="settings-nav-chip active" data-filter="all" title="Show all settings categories">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>All Categories</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionTheme" title="Jump to Appearance & Themes">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/></svg>
+              <span>Theme</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionTransfers" title="Jump to Transfer Settings">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
+              <span>Transfers</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionNetwork" title="Jump to Network & Discovery">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              <span>Network</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionSecurity" title="Jump to Security & PIN">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Security</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionNotifications" title="Jump to Sounds & Alerts">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+              <span>Sounds</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionStorage" title="Jump to Storage & Cache">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>Storage</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionAbout" title="Jump to About RirDrop">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span>About</span>
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn-secondary" id="btnToggleAllSections" style="padding:6px 14px; font-size:11px; border-radius:999px; font-weight:600;">
+              Expand All
+            </button>
+          </div>
+        </div>
+
         <!-- 2-COLUMN SETTINGS SECTIONS -->
         <div class="settings-grid">
 
           <!-- SECTION 1: APPEARANCE & THEMES -->
-          <div class="chart-card settings-section">
-            <div class="settings-section-header">
-              <div class="settings-section-icon" style="background:rgba(190, 242, 100, 0.12); color:var(--card-lime);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <div class="chart-card settings-section" id="sectionTheme" data-category="sectionTheme">
+            <div class="settings-section-header" data-target="sectionTheme" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(190, 242, 100, 0.12); color:var(--card-lime);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">Appearance & Theme</div>
+                  <div class="settings-section-subtitle">Manage UI colors, default dark mode, and visual styles</div>
+                </div>
               </div>
-              <div>
-                <div class="settings-section-title">Appearance & Theme</div>
-                <div class="settings-section-subtitle">Manage UI colors, default dark mode, and visual styles</div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryTheme">Dark Mode</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
             </div>
 
@@ -1024,14 +1075,22 @@
           </div>
 
           <!-- SECTION 2: TRANSFER SETTINGS -->
-          <div class="chart-card settings-section">
-            <div class="settings-section-header">
-              <div class="settings-section-icon" style="background:rgba(56, 189, 248, 0.12); color:var(--card-cyan);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <div class="chart-card settings-section" id="sectionTransfers" data-category="sectionTransfers">
+            <div class="settings-section-header" data-target="sectionTransfers" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(56, 189, 248, 0.12); color:var(--card-cyan);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">1. Transfer Settings</div>
+                  <div class="settings-section-subtitle">Controls how files are sent, saved, and received</div>
+                </div>
               </div>
-              <div>
-                <div class="settings-section-title">1. Transfer Settings</div>
-                <div class="settings-section-subtitle">Controls how files are sent and received</div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryTransfers">3 Concurrent</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
             </div>
 
@@ -1117,14 +1176,22 @@
           </div>
 
           <!-- SECTION 3: CONNECTION & NETWORK -->
-          <div class="chart-card settings-section">
-            <div class="settings-section-header">
-              <div class="settings-section-icon" style="background:rgba(192, 132, 252, 0.12); color:var(--card-purple);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          <div class="chart-card settings-section" id="sectionNetwork" data-category="sectionNetwork">
+            <div class="settings-section-header" data-target="sectionNetwork" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(192, 132, 252, 0.12); color:var(--card-purple);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">2. Connection & Network</div>
+                  <div class="settings-section-subtitle">Manage local Wi-Fi connectivity and device discovery</div>
+                </div>
               </div>
-              <div>
-                <div class="settings-section-title">2. Connection & Network</div>
-                <div class="settings-section-subtitle">Manage local connectivity and device discovery</div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryNetwork">UDP Active</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
             </div>
 
@@ -1200,14 +1267,22 @@
           </div>
 
           <!-- SECTION 4: PRIVACY & SECURITY -->
-          <div class="chart-card settings-section">
-            <div class="settings-section-header">
-              <div class="settings-section-icon" style="background:rgba(253, 224, 71, 0.12); color:var(--card-yellow);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div class="chart-card settings-section" id="sectionSecurity" data-category="sectionSecurity">
+            <div class="settings-section-header" data-target="sectionSecurity" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(253, 224, 71, 0.12); color:var(--card-yellow);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">3. Privacy & Security</div>
+                  <div class="settings-section-subtitle">Give users control over who can connect and download</div>
+                </div>
               </div>
-              <div>
-                <div class="settings-section-title">3. Privacy & Security</div>
-                <div class="settings-section-subtitle">Give users control over who can connect and download</div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummarySecurity">Approval Required</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
             </div>
 
@@ -1277,14 +1352,22 @@
           </div>
 
           <!-- SECTION 5: NOTIFICATIONS & SOUNDS -->
-          <div class="chart-card settings-section">
-            <div class="settings-section-header">
-              <div class="settings-section-icon" style="background:rgba(251, 113, 133, 0.12); color:var(--accent-rose);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <div class="chart-card settings-section" id="sectionNotifications" data-category="sectionNotifications">
+            <div class="settings-section-header" data-target="sectionNotifications" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(251, 113, 133, 0.12); color:var(--accent-rose);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">4. Notifications & Sound</div>
+                  <div class="settings-section-subtitle">Control desktop alerts and audio feedback</div>
+                </div>
               </div>
-              <div>
-                <div class="settings-section-title">4. Notifications & Sound</div>
-                <div class="settings-section-subtitle">Control desktop alerts and audio feedback</div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryNotifications">Audio Enabled</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
             </div>
 
@@ -1343,14 +1426,22 @@
           </div>
 
           <!-- SECTION 6: STORAGE & DATA MANAGEMENT -->
-          <div class="chart-card settings-section">
-            <div class="settings-section-header">
-              <div class="settings-section-icon" style="background:rgba(56, 189, 248, 0.12); color:var(--card-cyan);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <div class="chart-card settings-section" id="sectionStorage" data-category="sectionStorage">
+            <div class="settings-section-header" data-target="sectionStorage" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(56, 189, 248, 0.12); color:var(--card-cyan);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">5. Storage & Data</div>
+                  <div class="settings-section-subtitle">Manage stored files, temp chunks, and app cache</div>
+                </div>
               </div>
-              <div>
-                <div class="settings-section-title">5. Storage & Data</div>
-                <div class="settings-section-subtitle">Manage stored files and app cache</div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryStorage">Clean Cache</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
             </div>
 
@@ -1394,14 +1485,22 @@
           </div>
 
           <!-- SECTION 7: ABOUT RIRDROP -->
-          <div class="chart-card settings-section" style="grid-column: 1 / -1;">
-            <div class="settings-section-header">
-              <div class="settings-section-icon" style="background:rgba(190, 242, 100, 0.12); color:var(--card-lime);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div class="chart-card settings-section" id="sectionAbout" data-category="sectionAbout" style="grid-column: 1 / -1;">
+            <div class="settings-section-header" data-target="sectionAbout" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(190, 242, 100, 0.12); color:var(--card-lime);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">6. About RirDrop</div>
+                  <div class="settings-section-subtitle">Version info, open source licenses, and update management</div>
+                </div>
               </div>
-              <div>
-                <div class="settings-section-title">6. About RirDrop</div>
-                <div class="settings-section-subtitle">Version info, open source licenses, and troubleshooting</div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryAbout">v1.0.0 • Up to date</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
             </div>
 

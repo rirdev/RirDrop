@@ -82,6 +82,8 @@ class UpdateManager {
                 else if (name.endsWith('.apk')) downloads.android = url;
                 else if (name.endsWith('.appimage')) downloads.linux_appimage = url;
                 else if (name.endsWith('.deb')) downloads.linux_deb = url;
+                else if (name.endsWith('.tar.gz') || name.endsWith('.tgz') || name.includes('linux')) downloads.linux = url;
+                else if (name.endsWith('.zip')) downloads.general = url;
               }
             }
 
