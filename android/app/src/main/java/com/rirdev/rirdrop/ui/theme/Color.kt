@@ -2,16 +2,34 @@ package com.rirdev.rirdrop.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val BgDark = Color(0xFF0C0D12)
-val SurfaceDark = Color(0xFF14161F)
-val SurfaceVariantDark = Color(0xFF1B1F2C)
-val SurfaceElevated = Color(0xFF222738)
+val BgDark = Color(0xFF141519)
+val SurfaceDark = Color(0xFF202229)
+val SurfaceVariantDark = Color(0xFF282B34)
+val SurfaceElevated = Color(0xFF313542)
 
+// Mockup Card Palettes
+val CardPastelLime = Color(0xFFD9F99D)
+val CardPastelLimeText = Color(0xFF1A2E05)
+
+val CardPastelAmber = Color(0xFFFEF08A)
+val CardPastelAmberText = Color(0xFF3B2D00)
+
+val CardPastelCoral = Color(0xFFFECDD3)
+val CardPastelCoralText = Color(0xFF4C0519)
+
+val CardMatteDark = Color(0xFF202229)
+val CardMatteDarkBorder = Color(0xFF2E323E)
+
+// Floating Pill Navigation Bar
+val PillNavBg = Color(0xFF1A1C22)
+val PillNavActive = Color(0xFFFDE047)
+val PillNavActiveText = Color(0xFF121316)
+
+// Accents
 val NeonLime = Color(0xFF4ADE80)
 val NeonLimeContainer = Color(0xFF143820)
-val NeonLimeBorder = Color(0xFF22C55E)
 
-val BrandGold = Color(0xFFF5D834)
+val BrandGold = Color(0xFFFDE047)
 val BrandGoldContainer = Color(0xFF383210)
 
 val StreamCyan = Color(0xFF38BDF8)

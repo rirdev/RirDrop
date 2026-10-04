@@ -156,5 +156,7 @@ fun DevicesRadarScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(72.dp))
     }
 }

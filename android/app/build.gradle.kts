@@ -86,6 +86,13 @@ dependencies {
     // QR Code Generation
     implementation("com.google.zxing:core:3.5.3")
 
+    // In-App Video & Audio Streaming (Media3 ExoPlayer)
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
+
+    // Image & Thumbnail Loading
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
