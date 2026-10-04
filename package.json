@@ -7,7 +7,9 @@
   "scripts": {
     "start": "electron .",
     "test": "node tests/test-server.js && node tests/test-downloader.js && node tests/test-updates.js",
-    "build:linux": "electron-builder --linux"
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win",
+    "build:all": "electron-builder --linux --win"
   },
   "keywords": [
     "file-sharing",
@@ -50,6 +52,30 @@
       "category": "Network",
       "maintainer": "RirDev <dev@rirdev.com>",
       "syncDesktopName": true
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RirDrop"
     }
   }
 }
