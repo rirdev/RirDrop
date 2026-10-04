@@ -472,7 +472,29 @@ class StreamServer {
             const data = JSON.parse(body || '{}');
             const clientIp = req.socket.remoteAddress.replace(/^.*:/, ''); // strip IPv6 prefix
 
-            // If password is supplied directly:
+            // 1. Direct auto-pairing for RirDrop Android App on local LAN
+            if (data.clientType === 'rirdrop-android' || req.headers['x-rirdrop-client'] === 'android') {
+              if (!this.authManager.passwordProtected || (data.password && this.authManager.verifyPassword(null, data.password))) {
+                const token = this.authManager.generateToken();
+                const session = {
+                  token,
+                  ip: clientIp,
+                  deviceName: data.deviceName || 'Android Device',
+                  os: 'Android',
+                  fingerprint: data.fingerprint || token,
+                  authorizedAt: Date.now()
+                };
+                this.authManager.authorizedSessions.set(token, session);
+                if (data.fingerprint) {
+                  this.authManager.trustedDevices.set(data.fingerprint, session);
+                }
+                this.authManager.onEvent('device_approved', session);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ status: 'authorized', token }));
+              }
+            }
+
+            // 2. If password is supplied directly:
             if (this.authManager.passwordProtected && data.password) {
               if (this.authManager.verifyPassword(null, data.password)) {
                 // If approval is not required OR user entered correct master password:
@@ -517,6 +539,58 @@ class StreamServer {
           }
         });
         return;
+      }
+
+      // YT-DLP Downloader Endpoints (For phone & remote clients)
+      if (pathname === '/api/downloader/inspect' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+          try {
+            const data = JSON.parse(body || '{}');
+            if (!this.mediaDownloader) {
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ error: 'MediaDownloader not available on PC' }));
+            }
+            const info = await this.mediaDownloader.inspect(data.url);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(info));
+          } catch (err) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+        return;
+      }
+
+      if (pathname === '/api/downloader/start' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+          try {
+            const data = JSON.parse(body || '{}');
+            if (!this.mediaDownloader) {
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ error: 'MediaDownloader not available on PC' }));
+            }
+            const job = await this.mediaDownloader.startDownload(data);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(job));
+          } catch (err) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+        return;
+      }
+
+      if (pathname === '/api/downloader/status') {
+        if (!this.mediaDownloader) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ready: false, jobs: [] }));
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify(this.mediaDownloader.getStatus()));
       }
 
       // 3. Poll connection status endpoint
@@ -699,10 +773,13 @@ class StreamServer {
         const fileId = parsed.searchParams.get('fileId');
         const folderId = parsed.searchParams.get('folderId');
         const relPath = parsed.searchParams.get('relPath');
+        const directPath = parsed.searchParams.get('filePath');
         let targetFilePath = null;
 
         if (fileId && this.quickDropFiles.has(fileId)) {
           targetFilePath = this.quickDropFiles.get(fileId).path;
+        } else if (directPath && fs.existsSync(directPath)) {
+          targetFilePath = directPath;
         } else if (relPath) {
           let folderToSearch = null;
           if (folderId && this.sharedFolders.has(folderId)) {

@@ -88,6 +88,7 @@ async function startEngines() {
       }
     }
   });
+  streamServer.mediaDownloader = mediaDownloader;
 
   const host = getHostInfo();
   discoveryEngine = new DiscoveryEngine({

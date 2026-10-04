@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
+import android.net.TrafficStats
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -35,6 +36,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.min
@@ -44,6 +46,7 @@ enum class NavTab {
     QUICK_DROP,
     STORAGE,
     SPEED_TEST,
+    DOWNLOADER,
     RADAR,
     DOWNLOADS,
     SETTINGS
@@ -126,6 +129,44 @@ data class UpdateInfo(
     val htmlUrl: String
 )
 
+data class YtDlpFormatOption(
+    val id: String,
+    val label: String,
+    val isAudio: Boolean
+)
+
+data class YtDlpInspectResult(
+    val title: String,
+    val durationFormatted: String,
+    val thumbnail: String?,
+    val uploader: String,
+    val url: String,
+    val formats: List<YtDlpFormatOption> = emptyList()
+)
+
+data class YtDlpJob(
+    val id: String,
+    val title: String,
+    val progress: Float,
+    val speedStr: String,
+    val status: String,
+    val isFinished: Boolean,
+    val filePath: String? = null,
+    val fileName: String? = null,
+    val streamUrl: String? = null
+)
+
+data class YtDlpCompletedItem(
+    val jobId: String,
+    val title: String,
+    val fileName: String,
+    val filePath: String,
+    val fileSize: Long,
+    val totalFormatted: String,
+    val isVideo: Boolean,
+    val isAudio: Boolean
+)
+
 enum class BenchmarkPhase {
     IDLE,
     PING,
@@ -172,6 +213,10 @@ class RirDropViewModel : ViewModel() {
     val localIp: StateFlow<String> = _localIp.asStateFlow()
 
     val port: Int = 53318
+
+    // Device stable fingerprint & cached token
+    private var persistentFingerprint: String = "android-rd-" + UUID.randomUUID().toString().take(12)
+    private var cachedAuthToken: String? = null
 
     // 4. Discovered & Connected Peers
     private val _discoveredPeers = MutableStateFlow<List<PeerDevice>>(emptyList())
@@ -221,7 +266,7 @@ class RirDropViewModel : ViewModel() {
     private val _showMyQrModal = MutableStateFlow(false)
     val showMyQrModal: StateFlow<Boolean> = _showMyQrModal.asStateFlow()
 
-    // 8. Speed Test: Live Network Monitor State
+    // 8. Speed Test: Live Network Monitor State (from TrafficStats)
     private val _liveHistoryDl = MutableStateFlow<List<Float>>(List(30) { 0f })
     val liveHistoryDl: StateFlow<List<Float>> = _liveHistoryDl.asStateFlow()
 
@@ -275,12 +320,28 @@ class RirDropViewModel : ViewModel() {
     private val _isCheckingUpdate = MutableStateFlow(false)
     val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate.asStateFlow()
 
+    // 12. YT-DLP Downloader State
+    private val _ytDlpInspectResult = MutableStateFlow<YtDlpInspectResult?>(null)
+    val ytDlpInspectResult: StateFlow<YtDlpInspectResult?> = _ytDlpInspectResult.asStateFlow()
+
+    private val _isInspectingYtDlp = MutableStateFlow(false)
+    val isInspectingYtDlp: StateFlow<Boolean> = _isInspectingYtDlp.asStateFlow()
+
+    private val _activeYtDlpJobs = MutableStateFlow<List<YtDlpJob>>(emptyList())
+    val activeYtDlpJobs: StateFlow<List<YtDlpJob>> = _activeYtDlpJobs.asStateFlow()
+
+    private val _ytDlpCompletedList = MutableStateFlow<List<YtDlpCompletedItem>>(emptyList())
+    val ytDlpCompletedList: StateFlow<List<YtDlpCompletedItem>> = _ytDlpCompletedList.asStateFlow()
+
+    private val _isEngineAvailable = MutableStateFlow(true)
+    val isEngineAvailable: StateFlow<Boolean> = _isEngineAvailable.asStateFlow()
+
     private var discoveryEngine: DiscoveryEngine? = null
     private var httpServer: LocalHttpServer? = null
 
     init {
         runBootSequence()
-        startSpeedTelemetrySimulation()
+        startLiveNetworkTrafficPolling()
         startPcContinuousSync()
     }
 
@@ -302,6 +363,17 @@ class RirDropViewModel : ViewModel() {
 
     fun initPreferences(context: Context) {
         val prefs = context.getSharedPreferences("rirdrop_prefs", Context.MODE_PRIVATE)
+        val savedFp = prefs.getString("device_fingerprint", null)
+        if (savedFp.isNullOrBlank()) {
+            val newFp = "android-rd-" + UUID.randomUUID().toString().take(12)
+            persistentFingerprint = newFp
+            prefs.edit().putString("device_fingerprint", newFp).apply()
+        } else {
+            persistentFingerprint = savedFp
+        }
+
+        cachedAuthToken = prefs.getString("rirdrop_token", null)
+
         val savedDevice = prefs.getString("device_name", null)
         if (!savedDevice.isNullOrBlank()) {
             _deviceName.value = savedDevice
@@ -376,9 +448,16 @@ class RirDropViewModel : ViewModel() {
         _userMessage.value = msg
     }
 
+    fun appendToken(url: String, token: String?): String {
+        if (token.isNullOrBlank()) return url
+        return if (url.contains("?")) "$url&token=$token" else "$url?token=$token"
+    }
+
     // In-App Media Player
     fun playMedia(item: StreamMediaItem) {
-        _activeStreamMedia.value = item
+        val targetPc = _activePairedPc.value
+        val streamWithToken = appendToken(item.url, targetPc?.token ?: cachedAuthToken)
+        _activeStreamMedia.value = item.copy(url = streamWithToken)
     }
 
     fun closeMedia() {
@@ -387,9 +466,11 @@ class RirDropViewModel : ViewModel() {
 
     // Download file to phone using TransferService
     fun downloadToPhone(context: Context, url: String, fileName: String) {
+        val targetPc = _activePairedPc.value
+        val urlWithToken = appendToken(url, targetPc?.token ?: cachedAuthToken)
         val intent = Intent(context, TransferService::class.java).apply {
             action = TransferService.ACTION_START_DOWNLOAD
-            putExtra(TransferService.EXTRA_URL, url)
+            putExtra(TransferService.EXTRA_URL, urlWithToken)
             putExtra(TransferService.EXTRA_FILE_NAME, fileName)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -404,7 +485,7 @@ class RirDropViewModel : ViewModel() {
         }
     }
 
-    // Connect to a PC with automatic approval polling
+    // Connect to a PC with official RirDrop Android client handshake
     fun connectToPc(ip: String, port: Int = 53318, pcName: String? = null, password: String? = null) {
         approvalPollingJob?.cancel()
         _isApprovalPending.value = false
@@ -412,9 +493,10 @@ class RirDropViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val json = JSONObject().apply {
+                    put("clientType", "rirdrop-android")
                     put("deviceName", _deviceName.value)
                     put("os", "Android")
-                    put("fingerprint", "android-${System.currentTimeMillis()}")
+                    put("fingerprint", persistentFingerprint)
                     if (!password.isNullOrBlank()) {
                         put("password", password)
                     }
@@ -422,6 +504,7 @@ class RirDropViewModel : ViewModel() {
                 val body = json.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
                     .url("http://$ip:$port/api/connect")
+                    .header("X-RirDrop-Client", "android")
                     .post(body)
                     .build()
 
@@ -429,8 +512,12 @@ class RirDropViewModel : ViewModel() {
                 val respBody = response.body?.string() ?: "{}"
                 val respJson = JSONObject(respBody)
                 val status = respJson.optString("status", "pending")
-                val token = if (respJson.has("token")) respJson.getString("token") else null
+                val token = if (respJson.has("token")) respJson.getString("token") else cachedAuthToken
                 val requestId = respJson.optString("requestId", "")
+
+                if (!token.isNullOrBlank()) {
+                    cachedAuthToken = token
+                }
 
                 val paired = PairedPc(
                     ip = ip,
@@ -464,11 +551,11 @@ class RirDropViewModel : ViewModel() {
                     showMessage("Approval request sent! Click 'Accept' on your PC desktop")
                     startApprovalPolling(ip, port, pcName, requestId)
                 } else {
-                    fetchPcSharedData(ip, port, null)
+                    fetchPcSharedData(ip, port, token)
                 }
             } catch (e: Exception) {
                 // If direct connect fails, still try fetching shared data
-                fetchPcSharedData(ip, port, null)
+                fetchPcSharedData(ip, port, cachedAuthToken)
             }
         }
     }
@@ -476,9 +563,9 @@ class RirDropViewModel : ViewModel() {
     private fun startApprovalPolling(ip: String, port: Int, pcName: String?, requestId: String) {
         approvalPollingJob = viewModelScope.launch(Dispatchers.IO) {
             var attempts = 0
-            val maxAttempts = 60 // 90 seconds max
+            val maxAttempts = 60
             while (attempts < maxAttempts && _isApprovalPending.value) {
-                delay(1500)
+                delay(1200)
                 attempts++
                 try {
                     val pollUrl = "http://$ip:$port/api/poll-status?requestId=$requestId"
@@ -489,6 +576,7 @@ class RirDropViewModel : ViewModel() {
                         val status = json.optString("status")
                         if (status == "authorized") {
                             val token = json.optString("token")
+                            cachedAuthToken = token
                             val paired = PairedPc(
                                 ip = ip,
                                 port = port,
@@ -525,12 +613,12 @@ class RirDropViewModel : ViewModel() {
         val pc = _activePairedPc.value
         val ip = pc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
         val port = pc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
-        val token = pc?.token
+        val token = pc?.token ?: cachedAuthToken
         if (ip != null) {
             fetchPcSharedData(ip, port, token)
             showMessage("Refreshing PC shared storage...")
         } else {
-            showMessage("No PC detected yet. Scan radar or connect by IP.")
+            showMessage("No PC detected yet. Tap 'Connect IP' or scan radar.")
         }
     }
 
@@ -538,9 +626,8 @@ class RirDropViewModel : ViewModel() {
     private fun fetchPcSharedData(ip: String, port: Int, token: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val tokenParam = if (!token.isNullOrBlank()) "?token=$token" else ""
-                val url = "http://$ip:$port/api/shared$tokenParam"
-                val reqBuilder = Request.Builder().url(url)
+                val url = appendToken("http://$ip:$port/api/shared", token)
+                val reqBuilder = Request.Builder().url(url).header("X-RirDrop-Client", "android")
                 if (!token.isNullOrBlank()) {
                     reqBuilder.header("Authorization", "Bearer $token")
                 }
@@ -562,8 +649,8 @@ class RirDropViewModel : ViewModel() {
                         val isVideo = mimeType.startsWith("video/") || name.matches(Regex(""".*\.(mp4|mkv|webm|avi|mov)$""", RegexOption.IGNORE_CASE))
                         val isAudio = mimeType.startsWith("audio/") || name.matches(Regex(""".*\.(mp3|flac|wav|ogg|m4a|aac)$""", RegexOption.IGNORE_CASE))
 
-                        val streamUrl = "http://$ip:$port/api/stream?fileId=$id$tokenParam"
-                        val downloadUrl = "http://$ip:$port/api/download?fileId=$id$tokenParam"
+                        val streamUrl = appendToken("http://$ip:$port/api/stream?fileId=$id", token)
+                        val downloadUrl = appendToken("http://$ip:$port/api/download?fileId=$id", token)
 
                         pcFiles.add(
                             PcQuickDropFile(
@@ -590,7 +677,9 @@ class RirDropViewModel : ViewModel() {
                         val fName = obj.optString("name", "Shared Folder")
                         val fPath = obj.optString("path", "")
                         val previewThumb = if (obj.has("previewThumb") && !obj.isNull("previewThumb")) obj.optString("previewThumb") else null
-                        val fullThumbUrl = if (!previewThumb.isNullOrBlank()) "http://$ip:$port$previewThumb$tokenParam" else null
+                        val fullThumbUrl = if (!previewThumb.isNullOrBlank()) {
+                            appendToken("http://$ip:$port$previewThumb", token)
+                        } else null
                         folders.add(PcSharedFolder(fId, fName, fPath, fullThumbUrl))
                     }
                     _pcSharedFolders.value = folders
@@ -605,7 +694,7 @@ class RirDropViewModel : ViewModel() {
         val pc = _activePairedPc.value
         val targetIp = pc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
         val targetPort = pc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
-        val token = pc?.token
+        val token = pc?.token ?: cachedAuthToken
 
         if (targetIp == null) {
             _isBrowsingFolderLoading.value = false
@@ -614,9 +703,13 @@ class RirDropViewModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val tokenParam = if (!token.isNullOrBlank()) "&token=$token" else ""
-                val url = "http://$targetIp:$targetPort/api/shared?folderId=${folder.id}&subPath=${subPath}$tokenParam"
-                val res = httpClient.newCall(Request.Builder().url(url).build()).execute()
+                val baseUrl = "http://$targetIp:$targetPort/api/shared?folderId=${folder.id}&subPath=${subPath}"
+                val url = appendToken(baseUrl, token)
+                val req = Request.Builder().url(url).header("X-RirDrop-Client", "android")
+                if (!token.isNullOrBlank()) {
+                    req.header("Authorization", "Bearer $token")
+                }
+                val res = httpClient.newCall(req.build()).execute()
                 if (res.isSuccessful) {
                     val body = res.body?.string() ?: "{}"
                     val json = JSONObject(body)
@@ -632,9 +725,9 @@ class RirDropViewModel : ViewModel() {
                         val isAudio = obj.optBoolean("isAudio", false)
                         val isImage = obj.optBoolean("isImage", false)
                         val thumb = if (obj.has("thumbUrl") && !obj.isNull("thumbUrl")) obj.optString("thumbUrl") else null
-                        val fullThumb = if (!thumb.isNullOrBlank()) "http://$targetIp:$targetPort$thumb$tokenParam" else null
-                        val streamUrl = "http://$targetIp:$targetPort/api/stream?folderId=${folder.id}&relPath=${relPath}$tokenParam"
-                        val downloadUrl = "http://$targetIp:$targetPort/api/download?folderId=${folder.id}&relPath=${relPath}$tokenParam"
+                        val fullThumb = if (!thumb.isNullOrBlank()) appendToken("http://$targetIp:$targetPort$thumb", token) else null
+                        val streamUrl = appendToken("http://$targetIp:$targetPort/api/stream?folderId=${folder.id}&relPath=${relPath}", token)
+                        val downloadUrl = appendToken("http://$targetIp:$targetPort/api/download?folderId=${folder.id}&relPath=${relPath}", token)
 
                         items.add(
                             PcFolderItem(
@@ -744,7 +837,7 @@ class RirDropViewModel : ViewModel() {
                 val peer = _discoveredPeers.value.firstOrNull { it.os.contains("win", true) || it.os.contains("linux", true) || it.os.contains("mac", true) }
                 val ip = targetPc?.ip ?: peer?.ip
                 val port = targetPc?.port ?: peer?.httpPort ?: 53318
-                val token = targetPc?.token
+                val token = targetPc?.token ?: cachedAuthToken
 
                 if (ip != null) {
                     fetchPcSharedData(ip, port, token)
@@ -753,38 +846,49 @@ class RirDropViewModel : ViewModel() {
         }
     }
 
-    // Telemetry & rolling speed history ticker
-    private fun startSpeedTelemetrySimulation() {
+    // Real TrafficStats Polling for Live Network Monitor (Measures REAL network interface throughput)
+    private fun startLiveNetworkTrafficPolling() {
         viewModelScope.launch(Dispatchers.Default) {
+            var lastRxBytes = TrafficStats.getTotalRxBytes()
+            var lastTxBytes = TrafficStats.getTotalTxBytes()
+            var lastTime = System.currentTimeMillis()
+
             while (true) {
                 delay(1000)
-                val activeShares = _sharedFiles.value.size + _pcQuickDropFiles.value.size
-                val isConnected = _activePairedPc.value != null
+                val now = System.currentTimeMillis()
+                val dt = (now - lastTime) / 1000f
+                lastTime = now
 
-                val upMb: Float
-                val downMb: Float
+                val currentRx = TrafficStats.getTotalRxBytes()
+                val currentTx = TrafficStats.getTotalTxBytes()
 
-                if (isConnected || activeShares > 0) {
-                    upMb = (activeShares * 2.8f + (Math.random().toFloat() * 1.5f)).coerceAtLeast(1.2f)
-                    downMb = (activeShares * 3.4f + (Math.random().toFloat() * 2.1f)).coerceAtLeast(2.4f)
-                } else {
-                    upMb = 0f
-                    downMb = 0f
+                var rxBytesPerSec = 0L
+                var txBytesPerSec = 0L
+
+                if (lastRxBytes != TrafficStats.UNSUPPORTED.toLong() && currentRx >= lastRxBytes && dt > 0) {
+                    rxBytesPerSec = ((currentRx - lastRxBytes) / dt).toLong()
+                    txBytesPerSec = ((currentTx - lastTxBytes) / dt).toLong()
                 }
+
+                lastRxBytes = currentRx
+                lastTxBytes = currentTx
+
+                val dlMbps = (rxBytesPerSec * 8f) / 1000000f
+                val ulMbps = (txBytesPerSec * 8f) / 1000000f
+
+                val downMb = rxBytesPerSec / (1024f * 1024f)
+                val upMb = txBytesPerSec / (1024f * 1024f)
 
                 _speedStats.value = SpeedStats(
                     upSpeedStr = String.format(Locale.US, "%.1f MB/s", upMb),
                     downSpeedStr = String.format(Locale.US, "%.1f MB/s", downMb),
-                    upBytesPerSec = (upMb * 1024 * 1024).toLong(),
-                    downBytesPerSec = (downMb * 1024 * 1024).toLong()
+                    upBytesPerSec = rxBytesPerSec,
+                    downBytesPerSec = txBytesPerSec
                 )
 
                 // Update rolling graph history for Live Network tab
                 val currentDl = _liveHistoryDl.value.toMutableList()
                 val currentUl = _liveHistoryUl.value.toMutableList()
-
-                val dlMbps = downMb * 8f
-                val ulMbps = upMb * 8f
 
                 if (currentDl.size >= 30) currentDl.removeAt(0)
                 currentDl.add(dlMbps)
@@ -947,6 +1051,333 @@ class RirDropViewModel : ViewModel() {
         _benchGaugeTarget.value = 0f
     }
 
+    // YT-DLP Downloader Engine Integration
+    fun inspectYtDlpUrl(url: String) {
+        val targetPc = _activePairedPc.value
+        val ip = targetPc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = targetPc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+
+        if (ip == null) {
+            showMessage("Please connect to your PC to use the YT-DLP engine.")
+            return
+        }
+
+        _isInspectingYtDlp.value = true
+        _ytDlpInspectResult.value = null
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val json = JSONObject().apply { put("url", url.trim()) }
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val req = Request.Builder()
+                    .url("http://$ip:$port/api/downloader/inspect")
+                    .post(body)
+                    .build()
+
+                val resp = httpClient.newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val respJson = JSONObject(resp.body?.string() ?: "{}")
+                    val title = respJson.optString("title", "Media Video")
+                    val duration = respJson.optString("durationFormatted", "0:00")
+                    val thumb = if (respJson.isNull("thumbnail")) null else respJson.optString("thumbnail").takeIf { it.isNotBlank() }
+                    val uploader = respJson.optString("uploader", "YouTube")
+
+                    val formatsList = mutableListOf(
+                        YtDlpFormatOption("best", "Best Quality (1080p/4K)", false),
+                        YtDlpFormatOption("720p", "720p HD Video", false),
+                        YtDlpFormatOption("480p", "480p SD Video", false),
+                        YtDlpFormatOption("mp3", "Audio Only (MP3)", true)
+                    )
+
+                    _ytDlpInspectResult.value = YtDlpInspectResult(
+                        title = title,
+                        durationFormatted = duration,
+                        thumbnail = thumb,
+                        uploader = uploader,
+                        url = url.trim(),
+                        formats = formatsList
+                    )
+                } else {
+                    showMessage("Could not inspect URL: HTTP ${resp.code}")
+                }
+            } catch (e: Exception) {
+                showMessage("Inspection failed: ${e.message}")
+            } finally {
+                _isInspectingYtDlp.value = false
+            }
+        }
+    }
+
+    fun startYtDlpDownload(url: String, format: String, quality: String) {
+        val targetPc = _activePairedPc.value
+        val ip = targetPc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = targetPc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+
+        if (ip == null) {
+            showMessage("Please connect to PC first.")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val json = JSONObject().apply {
+                    put("url", url)
+                    put("format", format)
+                    put("quality", quality)
+                }
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val req = Request.Builder()
+                    .url("http://$ip:$port/api/downloader/start")
+                    .post(body)
+                    .build()
+
+                val resp = httpClient.newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val respJson = JSONObject(resp.body?.string() ?: "{}")
+                    val jobId = respJson.optString("jobId", "job-${System.currentTimeMillis()}")
+                    val title = respJson.optString("title", "Downloading Media...")
+                    val job = YtDlpJob(
+                        id = jobId,
+                        title = title,
+                        progress = 0.15f,
+                        speedStr = "Starting...",
+                        status = "Downloading",
+                        isFinished = false
+                    )
+                    _activeYtDlpJobs.value = listOf(job) + _activeYtDlpJobs.value
+                    showMessage("Download started on PC! Real-time progress active.")
+                    pollYtDlpProgress(ip, port, jobId)
+                } else {
+                    showMessage("Could not start download: HTTP ${resp.code}")
+                }
+            } catch (e: Exception) {
+                showMessage("Download failed: ${e.message}")
+            }
+        }
+    }
+
+    private fun pollYtDlpProgress(ip: String, port: Int, jobId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            var finished = false
+            var attempts = 0
+            while (!finished && attempts < 120) {
+                delay(1000)
+                attempts++
+                try {
+                    val req = Request.Builder().url("http://$ip:$port/api/downloader/status").build()
+                    val resp = httpClient.newCall(req).execute()
+                    if (resp.isSuccessful) {
+                        val respJson = JSONObject(resp.body?.string() ?: "{}")
+                        val activeCount = respJson.optInt("activeDownloadsCount", 0)
+
+                        // 1. Check active jobs
+                        val jobsArr = respJson.optJSONArray("jobs")
+                        var foundActive = false
+                        if (jobsArr != null) {
+                            for (i in 0 until jobsArr.length()) {
+                                val jObj = jobsArr.getJSONObject(i)
+                                if (jObj.optString("jobId") == jobId) {
+                                    foundActive = true
+                                    val percent = jObj.optDouble("percent", 0.0).toFloat() / 100f
+                                    val speed = jObj.optString("speed", "Downloading...")
+                                    val status = jObj.optString("status", "downloading")
+                                    val filePath = if (jObj.isNull("filePath")) null else jObj.optString("filePath").takeIf { it.isNotBlank() }
+                                    val fileName = if (jObj.isNull("fileName")) null else jObj.optString("fileName").takeIf { it.isNotBlank() }
+                                    _activeYtDlpJobs.value = _activeYtDlpJobs.value.map {
+                                        if (it.id == jobId) it.copy(
+                                            progress = max(it.progress, percent),
+                                            speedStr = speed,
+                                            status = status.replaceFirstChar { c -> c.uppercase() },
+                                            filePath = filePath,
+                                            fileName = fileName
+                                        ) else it
+                                    }
+                                    break
+                                }
+                            }
+                        }
+
+                        // 2. Refresh completed list
+                        val compArr = respJson.optJSONArray("completedList")
+                        if (compArr != null) {
+                            val cList = mutableListOf<YtDlpCompletedItem>()
+                            for (i in 0 until compArr.length()) {
+                                val obj = compArr.getJSONObject(i)
+                                val name = obj.optString("fileName", "")
+                                val mime = getMimeType(name)
+                                cList.add(
+                                    YtDlpCompletedItem(
+                                        jobId = obj.optString("jobId", "comp-$i"),
+                                        title = obj.optString("title", name),
+                                        fileName = name,
+                                        filePath = obj.optString("filePath", ""),
+                                        fileSize = obj.optLong("fileSize", 0L),
+                                        totalFormatted = obj.optString("total", "0 B"),
+                                        isVideo = mime.startsWith("video/"),
+                                        isAudio = mime.startsWith("audio/")
+                                    )
+                                )
+                            }
+                            _ytDlpCompletedList.value = cList
+                        }
+
+                        // 3. Mark completed if no longer in active queue
+                        if (!foundActive && (activeCount == 0 || attempts > 2)) {
+                            finished = true
+                            val matchingComp = _ytDlpCompletedList.value.firstOrNull()
+                            _activeYtDlpJobs.value = _activeYtDlpJobs.value.map {
+                                if (it.id == jobId) it.copy(
+                                    progress = 1.0f,
+                                    status = "Completed",
+                                    isFinished = true,
+                                    filePath = matchingComp?.filePath ?: it.filePath,
+                                    fileName = matchingComp?.fileName ?: it.fileName
+                                ) else it
+                            }
+                            showMessage("✔ Download complete! Ready in PC shared storage.")
+                            fetchPcSharedData(ip, port, cachedAuthToken)
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    fun fetchDownloaderStatus() {
+        val targetPc = _activePairedPc.value
+        val ip = targetPc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = targetPc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+
+        if (ip == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val req = Request.Builder().url("http://$ip:$port/api/downloader/status").build()
+                val resp = httpClient.newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val respJson = JSONObject(resp.body?.string() ?: "{}")
+                    _isEngineAvailable.value = respJson.optBoolean("available", true)
+
+                    val compArr = respJson.optJSONArray("completedList")
+                    if (compArr != null) {
+                        val cList = mutableListOf<YtDlpCompletedItem>()
+                        for (i in 0 until compArr.length()) {
+                            val obj = compArr.getJSONObject(i)
+                            val name = obj.optString("fileName", "")
+                            val mime = getMimeType(name)
+                            cList.add(
+                                YtDlpCompletedItem(
+                                    jobId = obj.optString("jobId", "comp-$i"),
+                                    title = obj.optString("title", name),
+                                    fileName = name,
+                                    filePath = obj.optString("filePath", ""),
+                                    fileSize = obj.optLong("fileSize", 0L),
+                                    totalFormatted = obj.optString("total", "0 B"),
+                                    isVideo = mime.startsWith("video/"),
+                                    isAudio = mime.startsWith("audio/")
+                                )
+                            )
+                        }
+                        _ytDlpCompletedList.value = cList
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun clearYtDlpInspectResult() {
+        _ytDlpInspectResult.value = null
+    }
+
+    fun removeYtDlpJob(jobId: String) {
+        _activeYtDlpJobs.value = _activeYtDlpJobs.value.filter { it.id != jobId }
+    }
+
+    fun streamYtDlpFile(item: YtDlpCompletedItem) {
+        val targetPc = _activePairedPc.value
+        val ip = targetPc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = targetPc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+        if (ip == null) {
+            showMessage("Please connect to PC to stream.")
+            return
+        }
+        val encodedPath = Uri.encode(item.filePath)
+        var streamUrl = "http://$ip:$port/api/stream?filePath=$encodedPath"
+        streamUrl = appendToken(streamUrl, cachedAuthToken)
+
+        playMedia(
+            StreamMediaItem(
+                title = item.title,
+                mimeType = if (item.isVideo) "video/mp4" else "audio/mp3",
+                url = streamUrl,
+                isVideo = item.isVideo
+            )
+        )
+    }
+
+    fun downloadYtDlpFileToPhone(context: Context, item: YtDlpCompletedItem) {
+        val targetPc = _activePairedPc.value
+        val ip = targetPc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = targetPc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+        if (ip == null) {
+            showMessage("Please connect to PC to download.")
+            return
+        }
+        val encodedPath = Uri.encode(item.filePath)
+        var dlUrl = "http://$ip:$port/api/download?filePath=$encodedPath"
+        dlUrl = appendToken(dlUrl, cachedAuthToken)
+
+        downloadToPhone(context, dlUrl, item.fileName)
+    }
+
+    fun streamYtDlpJob(job: YtDlpJob) {
+        val targetPc = _activePairedPc.value
+        val ip = targetPc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = targetPc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+        if (ip == null) {
+            showMessage("Please connect to PC to stream.")
+            return
+        }
+        val path = job.filePath
+        if (path.isNullOrBlank()) {
+            showMessage("File path not yet resolved.")
+            return
+        }
+        val encodedPath = Uri.encode(path)
+        var streamUrl = "http://$ip:$port/api/stream?filePath=$encodedPath"
+        streamUrl = appendToken(streamUrl, cachedAuthToken)
+
+        playMedia(
+            StreamMediaItem(
+                title = job.title,
+                mimeType = "video/mp4",
+                url = streamUrl,
+                isVideo = true
+            )
+        )
+    }
+
+    fun downloadYtDlpJobToPhone(context: Context, job: YtDlpJob) {
+        val targetPc = _activePairedPc.value
+        val ip = targetPc?.ip ?: _discoveredPeers.value.firstOrNull()?.ip
+        val port = targetPc?.port ?: _discoveredPeers.value.firstOrNull()?.httpPort ?: 53318
+        if (ip == null) {
+            showMessage("Please connect to PC to download.")
+            return
+        }
+        val path = job.filePath
+        if (path.isNullOrBlank()) {
+            showMessage("File path not yet resolved.")
+            return
+        }
+        val encodedPath = Uri.encode(path)
+        var dlUrl = "http://$ip:$port/api/download?filePath=$encodedPath"
+        dlUrl = appendToken(dlUrl, cachedAuthToken)
+
+        val name = job.fileName ?: "${job.title}.mp4"
+        downloadToPhone(context, dlUrl, name)
+    }
+
     // Downloads Manager: Scan device Downloads/RirDrop
     fun refreshDownloadedFiles(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -986,7 +1417,6 @@ class RirDropViewModel : ViewModel() {
                     }
                 }
             }
-            // Sort newest first
             list.sortByDescending { it.file.lastModified() }
             _downloadedFiles.value = list
         }

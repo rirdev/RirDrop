@@ -292,17 +292,7 @@ fun DashboardScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Official M3 Expressive Wavy Progress Indicator on Card
-                M3WavyLinearProgressIndicator(
-                    progress = { if (activePairedPc != null || pcQuickDropFiles.isNotEmpty()) 0.8f else 0.25f },
-                    color = CardPastelLimeText,
-                    trackColor = CardPastelLimeText.copy(alpha = 0.18f),
-                    modifier = Modifier.fillMaxWidth().height(14.dp)
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Button(
                     onClick = { onPickFilesClicked() },
@@ -328,58 +318,118 @@ fun DashboardScreen(
             }
         }
 
-        // 3. Quick Action Feature Tiles: Speed Test & PC Storage
-        Row(
+        // 3. Quick Action Feature Tiles: PC Storage, Downloader, Speed Test, Devices Radar
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Speed Test Tile
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { viewModel.selectTab(NavTab.SPEED_TEST) },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = CardMatteDark),
-                border = BorderStroke(1.dp, CardMatteDarkBorder)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(NeonLime.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = NeonLime, modifier = Modifier.size(20.dp))
+                // PC Storage Tile
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { viewModel.selectTab(NavTab.STORAGE) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardMatteDark),
+                    border = BorderStroke(1.dp, CardMatteDarkBorder)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(StreamCyan.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(imageVector = Icons.Default.FolderShared, contentDescription = null, tint = StreamCyan, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(text = "PC Storage", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(text = "${pcSharedFolders.size} Shared Folders", fontSize = 11.sp, color = TextMuted)
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "Speed Test", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                    Text(text = "Live throughput & latency", fontSize = 11.sp, color = TextMuted)
+                }
+
+                // YT-DLP Downloader Tile
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { viewModel.selectTab(NavTab.DOWNLOADER) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardMatteDark),
+                    border = BorderStroke(1.dp, BrandGold.copy(alpha = 0.4f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(BrandGold.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(imageVector = Icons.Default.Download, contentDescription = null, tint = BrandGold, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(text = "Downloader", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(text = "YT, TikTok & Media", fontSize = 11.sp, color = BrandGold)
+                    }
                 }
             }
 
-            // PC Storage Tile
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { viewModel.selectTab(NavTab.STORAGE) },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = CardMatteDark),
-                border = BorderStroke(1.dp, CardMatteDarkBorder)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(StreamCyan.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.FolderShared, contentDescription = null, tint = StreamCyan, modifier = Modifier.size(20.dp))
+                // Speed Test Tile
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { viewModel.selectTab(NavTab.SPEED_TEST) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardMatteDark),
+                    border = BorderStroke(1.dp, CardMatteDarkBorder)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(NeonLime.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = NeonLime, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(text = "Speed Test", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(text = "Live throughput & ping", fontSize = 11.sp, color = TextMuted)
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "PC Storage", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                    Text(text = "${pcSharedFolders.size} Shared Folders", fontSize = 11.sp, color = TextMuted)
+                }
+
+                // Radar Tile
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { viewModel.selectTab(NavTab.RADAR) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardMatteDark),
+                    border = BorderStroke(1.dp, CardMatteDarkBorder)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF818CF8).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(imageVector = Icons.Default.Radar, contentDescription = null, tint = Color(0xFF818CF8), modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(text = "Radar & LAN", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(text = "Auto-discover devices", fontSize = 11.sp, color = TextMuted)
+                    }
                 }
             }
         }

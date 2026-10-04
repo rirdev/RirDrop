@@ -138,6 +138,7 @@ class MediaDownloader {
   }
 
   getStatus() {
+    const jobs = Array.from(this.activeJobs.values()).map(j => this.getJobPayload(j));
     return {
       available: !!this.binaries.ytdlpPath,
       ytdlpPath: this.binaries.ytdlpPath,
@@ -145,7 +146,9 @@ class MediaDownloader {
       hasFfmpeg: !!this.binaries.ffmpegPath,
       version: this.binaries.version || 'Not installed',
       activeDownloadsCount: this.activeJobs.size,
-      completedDownloadsCount: this.completedJobs.length
+      completedDownloadsCount: this.completedJobs.length,
+      jobs,
+      completedList: this.getCompletedDownloads().slice(0, 30)
     };
   }
 

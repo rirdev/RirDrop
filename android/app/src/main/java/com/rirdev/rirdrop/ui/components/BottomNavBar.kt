@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -46,7 +46,7 @@ fun RirDropBottomNavBar(
         NavItem(NavTab.DASHBOARD, "Home", Icons.Default.Dashboard),
         NavItem(NavTab.QUICK_DROP, "Drop", Icons.Default.Bolt),
         NavItem(NavTab.STORAGE, "Storage", Icons.Default.FolderShared),
-        NavItem(NavTab.SPEED_TEST, "Speed", Icons.Default.Speed),
+        NavItem(NavTab.DOWNLOADER, "Downloader", Icons.Default.CloudDownload),
         NavItem(NavTab.SETTINGS, "Settings", Icons.Default.Settings)
     )
 

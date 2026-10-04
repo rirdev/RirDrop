@@ -44,6 +44,7 @@ import com.rirdev.rirdrop.ui.modals.InAppMediaPlayerSheet
 import com.rirdev.rirdrop.ui.modals.MyQrBottomSheet
 import com.rirdev.rirdrop.ui.screens.DashboardScreen
 import com.rirdev.rirdrop.ui.screens.DevicesRadarScreen
+import com.rirdev.rirdrop.ui.screens.DownloaderScreen
 import com.rirdev.rirdrop.ui.screens.DownloadsScreen
 import com.rirdev.rirdrop.ui.screens.QuickDropScreen
 import com.rirdev.rirdrop.ui.screens.SettingsScreen
@@ -154,6 +155,9 @@ fun RirDropApp(
                                     viewModel = viewModel
                                 )
                                 NavTab.SPEED_TEST -> SpeedTestScreen(
+                                    viewModel = viewModel
+                                )
+                                NavTab.DOWNLOADER -> DownloaderScreen(
                                     viewModel = viewModel
                                 )
                                 NavTab.DOWNLOADS -> DownloadsScreen(
