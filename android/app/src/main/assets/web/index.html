@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RirDrop • High-Speed Local File Sharing & Streaming</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/png" href="favicon.png">
+</head>
+<body>
+
+  <!-- Startup / Loading Screen -->
+  <div id="loadingScreen">
+    <div class="splash-logo-container">
+      <div class="splash-logo-glow"></div>
+      <div class="splash-logo-badge">
+        <img src="logo.png" alt="RirDrop" style="width:64px; height:64px; object-fit:contain; filter:drop-shadow(0 4px 14px rgba(245,216,52,0.45));">
+      </div>
+    </div>
+    <div class="splash-title">RirDrop</div>
+    <div class="splash-subtitle">Offline Local File Sharing & Streaming</div>
+    <div class="splash-progress-track">
+      <div class="splash-progress-bar" id="splashBar"></div>
+    </div>
+    <div class="splash-status-text" id="splashStatus">Initializing RirDrop engine...</div>
+  </div>
+
+  <!-- App Shell -->
+  <div class="app-container">
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-emblem">
+          <img src="logo.png" alt="RirDrop Logo" style="width:26px; height:26px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(245,216,52,0.35));">
+        </div>
+        <div class="brand-name">RirDrop</div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-link active" data-page="dashboard" id="navDashboard">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-link" data-page="quickdrop" id="navQuickdrop">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          </span>
+          <span>Quick Drop</span>
+        </div>
+        <div class="nav-link" data-page="storage" id="navStorage">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          </span>
+          <span>Storage & Stream</span>
+        </div>
+        <div class="nav-link" data-page="devices" id="navDevices">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>
+          </span>
+          <span>Connected Devices</span>
+        </div>
+        <div class="nav-link" data-page="downloader" id="navDownloader">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </span>
+          <span>Downloader</span>
+        </div>
+        <div class="nav-link" data-page="speedtest" id="navSpeedtest">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="m14 11 3-3"></path><path d="M4 14.5a8 8 0 1 1 16 0"></path></svg>
+          </span>
+          <span>Speed Test</span>
+        </div>
+        <div class="nav-link" data-page="security" id="navSecurity">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </span>
+          <span>Security & Auth</span>
+        </div>
+      </nav>
+
+      <!-- Bottom Promo Pill Card (Matching reference design) -->
+      <div class="sidebar-promo-card">
+        <div class="promo-badge">Offline Mode</div>
+        <div class="promo-title">High-Speed LAN Sharing</div>
+        <div class="promo-desc">Share files and stream movies at full Wi-Fi speed with zero internet data.</div>
+        <button class="btn-promo" id="btnOpenPortal">Open Web Portal</button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="nav-link" id="btnSettings" data-page="settings">
+          <span class="nav-icon" style="position:relative;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span id="navUpdateDot" style="display:none; position:absolute; top:-2px; right:-2px; width:8px; height:8px; background:#f59e0b; border-radius:50%; border:2px solid var(--bg-card); box-shadow:0 0 6px #f59e0b;"></span>
+          </span>
+          <span>Settings</span>
+        </div>
+        <div class="nav-link" id="btnQuit">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </span>
+          <span>Exit RirDrop</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <main class="main-viewport">
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="greeting-title" id="greetingUser" style="cursor:pointer;" title="Click to change your display name">Hello, JOHN DOE</div>
+            <button class="btn-icon-subtle" id="btnEditGreetingName" title="Change your display name" style="padding:3px 7px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+          </div>
+          <div class="greeting-subtitle">
+            <span class="online-dot"></span>
+            <span id="networkStatusText">Local Network • Ready to Share</span>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn-topbar-scan" id="btnScanPcQr" title="Scan PC QR Code to Connect Instantly" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(74,222,128,0.2), rgba(56,189,248,0.2)); border:1px solid rgba(74,222,128,0.4); color:#4ade80; border-radius:8px; padding:7px 14px; font-weight:600; font-size:13px; cursor:pointer; margin-right:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <span>Scan PC QR</span>
+          </button>
+          <button class="btn-topbar-qr" id="btnTopbarQr" title="Show QR Code to connect from phone">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            <span>Connect Phone (QR)</span>
+          </button>
+          <div class="search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="searchInput" placeholder="Search devices or files...">
+          </div>
+          <div class="topbar-btn" id="btnNotification" title="Pending Connection Requests">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <div class="badge-counter" id="bellCounter" style="display:none;">0</div>
+          </div>
+          <button class="topbar-btn" id="btnTopbarToggleDrawer" title="Toggle Devices & Peers panel">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+          </button>
+          <div class="user-avatar" id="userAvatar">RD</div>
+        </div>
+      </header>
+
+      <!-- ============================================== -->
+      <!-- VIEW 1: DASHBOARD (Matching Reference Image) -->
+      <!-- ============================================== -->
+      <div id="pageDashboard" class="page-container content-body active">
+
+        <!-- Center Column -->
+        <div class="center-column">
+
+          <!-- 3 Vibrant Accent Stat Cards (Yellow, Purple, Lime) -->
+          <div class="stat-cards-row">
+
+            <!-- Card 1: Warm Pastel Yellow -->
+            <div class="stat-card card-yellow" id="cardQuickDrop">
+              <div class="stat-card-header">Quick Shares (<span id="statDropCount">0</span>)</div>
+              <div class="stat-card-bottom">
+                <div class="stat-card-meta">
+                  <div class="stat-card-sub">Active Files Dropped</div>
+                  <div class="stat-card-value" id="statDropSize">0 B</div>
+                </div>
+                <div class="stat-card-circle-btn" title="Add Files">↘</div>
+              </div>
+            </div>
+
+            <!-- Card 2: Lavender Purple -->
+            <div class="stat-card card-purple" id="cardStreamFolder">
+              <div class="stat-card-header">Storage Stream (<span id="statFoldersCount">0</span>)</div>
+              <div class="stat-card-bottom">
+                <div class="stat-card-meta">
+                  <div class="stat-card-sub">Mounted Folders</div>
+                  <div class="stat-card-value" id="statStreamPath">0 Folders</div>
+                </div>
+                <div class="stat-card-circle-btn" title="Manage Folders">↘</div>
+              </div>
+            </div>
+
+            <!-- Card 3: Neon Lime -->
+            <div class="stat-card card-lime" id="cardPeers">
+              <div class="stat-card-header">Connected Devices (<span id="statPeerCount">0</span>)</div>
+              <div class="stat-card-bottom">
+                <div class="stat-card-meta">
+                  <div class="stat-card-sub">Local LAN Peers</div>
+                  <div class="stat-card-value" id="statPeerText">0 Peers</div>
+                </div>
+                <div class="stat-card-circle-btn" title="Scan Network" id="btnScanNow">↘</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Network Transfer Activity Wave Chart Card -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Network Transfer Activity</div>
+                <div class="chart-subtitle" id="chartLiveTime">Real-time throughput</div>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <div class="legend-dot dot-up"></div>
+                  <span>Stream Out (<span id="liveUpSpeed">0 B/s</span>)</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-dot dot-down"></div>
+                  <span>Receive (<span id="liveDownSpeed">0 B/s</span>)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="chart-canvas-container">
+              <canvas id="transferChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Lower Split Cards: Dropzone & Drive Streamer -->
+          <div class="split-cards-row">
+
+            <!-- Card A: Drag & Drop Files and Folders -->
+            <div class="info-card">
+              <div class="info-card-header">
+                <div class="info-card-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--card-yellow);"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                  <span>Quick Dropzone</span>
+                </div>
+                <button class="card-pill-btn" id="btnBrowseFiles">+ Add Files</button>
+              </div>
+
+              <div class="dropzone-box" id="desktopDropzone">
+                <div class="dropzone-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--card-yellow);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </div>
+                <div class="dropzone-hint">Drag & Drop files or folders here</div>
+                <div class="dropzone-subhint">Any connected device can instantly download them</div>
+              </div>
+
+              <div class="mini-files-list" id="miniDropList">
+                <!-- Injected dropped files -->
+              </div>
+            </div>
+
+            <!-- Card B: Multi-Folder Streaming Management -->
+            <div class="info-card">
+              <div class="info-card-header">
+                <div class="info-card-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--card-lime);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  <span>Drive & Folder Stream</span>
+                </div>
+                <button class="card-pill-btn pill-lime" id="btnSelectDrive">+ Add Folder</button>
+              </div>
+
+              <!-- Multi-Folder Shared List Container -->
+              <div class="shared-folders-container" id="dashboardFoldersContainer">
+                <!-- Injected shared folder rows with safe 'Remove Access' buttons -->
+              </div>
+
+              <div class="remove-access-subtext">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span>Removing access revokes network stream • Files remain on disk</span>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn-secondary" id="btnExploreDrive" style="flex:1;">Browse Stream Page</button>
+                <button class="btn-secondary" id="btnSecurityModal" style="flex:1;">Security</button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Right Sticky Drawer (Device Authorization & Peers List) -->
+        <aside class="right-drawer" id="dashboardRightDrawer">
+
+          <div class="drawer-header-bar">
+            <div class="drawer-header-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--card-lime);"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              <span>Devices & Peers</span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button id="btnDrawerQr" class="drawer-header-pill-btn" title="Scan QR Code to connect phone">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>QR</span>
+              </button>
+              <button id="btnScanRefresh" class="drawer-header-pill-btn refresh" title="Refresh local peers">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                <span>Sync</span>
+              </button>
+              <button id="btnMinimizeRightDrawer" class="btn-drawer-collapse" title="Minimize Devices & Peers panel">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Minimized Dock Rail View -->
+          <div class="drawer-rail-view" id="drawerRailView" title="Click to expand Devices & Peers">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--card-lime);"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+            <div class="rail-badge" id="railPeersBadge">0</div>
+            <div class="rail-vertical-text">DEVICES</div>
+          </div>
+
+          <!-- Pending Requests Container -->
+          <div id="pendingRequestsContainer" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Rendered pending cards -->
+          </div>
+
+          <!-- Connected Devices Container -->
+          <div id="connectedDevicesContainer" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Rendered authorized cards -->
+          </div>
+
+          <!-- Nearby Discovered Peers -->
+          <div id="discoveredPeersContainer" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Rendered UDP peers -->
+          </div>
+
+        </aside>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 2: DEDICATED QUICK DROP PAGE              -->
+      <!-- ============================================== -->
+      <div id="pageQuickDrop" class="page-container" style="display:none; padding: 0 28px 24px; flex-direction:column; gap:20px; overflow-y:auto;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800;">Quick Dropzone & Shares</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Share files and folders directly with phones and PCs on your Wi-Fi.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" id="btnClearAllQuickDrop">Clear All</button>
+            <button class="btn-primary" id="btnBrowseFilesLarge">+ Add Files / Folders</button>
+          </div>
+        </div>
+
+        <div class="dropzone-box" id="desktopDropzoneLarge" style="padding: 40px 20px;">
+          <div class="dropzone-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--card-yellow); margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </div>
+          <div class="dropzone-hint" style="font-size: 16px;">Drop files or folders anywhere here</div>
+          <div class="dropzone-subhint" style="font-size: 13px; margin-top: 4px;">Direct LAN peer-to-peer transmission • No file size limits</div>
+        </div>
+
+        <div class="chart-card" style="padding: 20px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px;">
+            <div style="font-size: 15px; font-weight: 700;">Active Shared Items (<span id="qdPageCount">0</span>)</div>
+            <div style="font-size: 12px; color: var(--card-yellow);" id="qdPageTotalSize">0 B total</div>
+          </div>
+          <div id="qdPageList" style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Rendered list of items with preview & delete buttons -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 3: DEDICATED STORAGE & STREAM EXPLORER    -->
+      <!-- ============================================== -->
+      <div id="pageStorage" class="page-container" style="display:none; padding: 0 28px 24px; flex-direction:column; gap:20px; overflow-y:auto;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800;">Storage & Drive Stream Server</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Stream movies, music, and explore hard drives across your local network.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-primary" id="btnStorageAddFolder">+ Add Folder / Drive</button>
+            <button class="btn-secondary" id="btnLaunchInBrowser">Open in Browser</button>
+          </div>
+        </div>
+
+        <!-- 3A: FOLDERS VIEW (Shown when no folder is selected) -->
+        <div id="storageFoldersView" style="display:flex; flex-direction:column; gap:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--card-lime);">Mounted Stream Folders (<span id="storageFoldersCount">0</span>)</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Click any folder to stream media. Remove access does not delete files from disk.</div>
+          </div>
+          <div id="storageFoldersList" class="folders-view-grid">
+            <!-- Rendered folder cards with cover thumbnails & remove buttons -->
+          </div>
+        </div>
+
+        <!-- 3B: FOLDER CONTENTS / STREAM VIEW (Shown when a folder is selected) -->
+        <div id="storageContentView" style="display:none; flex-direction:column; gap:16px;">
+          <div class="stream-info-box" style="padding: 14px 20px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <button class="btn-secondary" id="btnStorageBack" style="padding:7px 14px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                  <span>Back</span>
+                </button>
+                <div id="storageBreadcrumbs" class="breadcrumb-nav">
+                  <!-- Injected breadcrumb links -->
+                </div>
+              </div>
+              <div id="storageActiveFolderBadge" style="font-size:12px; color:var(--text-muted); font-family:monospace;"></div>
+            </div>
+          </div>
+
+          <div id="storageItemsGrid" class="storage-grid">
+            <!-- Rendered folder contents with image thumbnails & video preview frames -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 4: DEDICATED CONNECTED DEVICES & RADAR   -->
+      <!-- ============================================== -->
+      <div id="pageDevices" class="page-container" style="display:none; padding: 0 28px 24px; flex-direction:column; gap:20px; overflow-y:auto;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800;">Connected Devices & Network Radar</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Authorize incoming phone connections and discover nearby RirDrop peers on UDP 53317.</p>
+          </div>
+          <button class="btn-primary" id="btnPageScanRadar">Scan LAN Now</button>
+        </div>
+
+        <!-- Dedicated QR Connect Banner -->
+        <div class="chart-card" style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; background:linear-gradient(135deg, #181824, #241d3b); border:1px solid rgba(192, 132, 252, 0.35);">
+          <div>
+            <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(192, 132, 252, 0.2); color:var(--card-purple); padding:4px 12px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              <span>Instant Phone Pairing</span>
+            </div>
+            <div style="font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px;">Scan to Connect Phone or Tablet</div>
+            <div style="font-size: 13px; color: var(--text-secondary); max-width: 480px; line-height:1.4;">
+              Open your phone camera, scan the QR code, and tap the link to browse and stream files immediately without installing any app on the phone.
+            </div>
+            <div style="margin-top: 14px; display:flex; gap:10px; align-items:center;">
+              <button class="btn-primary" id="btnShowQrFromDevices" style="padding:7px 16px;">Expand QR Code</button>
+              <span style="font-family:monospace; font-size:12px; color:var(--card-yellow); background:rgba(0,0,0,0.4); padding:6px 12px; border-radius:8px; border:1px solid var(--border);" id="devicesPageUrlText">http://...</span>
+            </div>
+          </div>
+          <div style="background:#fff; padding:10px; border-radius:14px; display:inline-block; box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+            <img id="devicesPageQrImg" src="" alt="QR" style="width:120px; height:120px; display:block;">
+          </div>
+        </div>
+
+        <!-- Pending Section -->
+        <div class="chart-card" id="devicesPendingSection">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--card-yellow);">Pending Authorization Requests (<span id="devicesPendingCount">0</span>)</div>
+          </div>
+          <div id="devicesPagePendingList" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Injected pending requests -->
+          </div>
+        </div>
+
+        <!-- Authorized Connected Devices -->
+        <div class="chart-card">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--card-lime);">Authorized Connected Devices (<span id="devicesConnectedCount">0</span>)</div>
+          </div>
+          <div id="devicesPageConnectedList" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Injected connected devices -->
+          </div>
+        </div>
+
+        <!-- Discovered LAN Peers -->
+        <div class="chart-card">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--card-cyan);">Nearby Discovered RirDrop Hosts (<span id="devicesDiscoveredCount">0</span>)</div>
+          </div>
+          <div id="devicesPageDiscoveredList" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Injected UDP peers -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 5: DEDICATED SECURITY & AUTH PAGE         -->
+      <!-- ============================================== -->
+      <div id="pageSecurity" class="page-container" style="display:none; padding: 0 28px 24px; flex-direction:column; gap:20px; overflow-y:auto;">
+        <div>
+          <h2 style="font-size: 20px; font-weight: 800;">Security & Access Control</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Protect your files and manage who is allowed to download or stream across Wi-Fi.</p>
+        </div>
+
+        <div class="chart-card" style="padding: 24px; max-width: 640px;">
+          <div style="display:flex; flex-direction:column; gap:20px;">
+
+            <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:16px;">
+              <div>
+                <div style="font-size: 15px; font-weight: 700;">Require Device Pairing Authorization</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Unknown phones or computers must receive your explicit click approval on this screen before connecting.</div>
+              </div>
+              <input type="checkbox" id="secPageRequireAuth" checked style="width: 20px; height: 20px; accent-color: var(--card-lime);">
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size: 15px; font-weight: 700;">Master Access Password</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Require a custom password or PIN for any device to access files or streams.</div>
+              </div>
+              <input type="checkbox" id="secPageEnablePassword" style="width: 20px; height: 20px; accent-color: var(--card-lime);">
+            </div>
+
+            <div id="secPagePasswordGroup" style="display:none;">
+              <label style="font-size: 12px; color: var(--text-muted); display:block; margin-bottom: 6px;">Set Password / PIN:</label>
+              <input type="text" id="secPagePasswordInput" class="modal-input" placeholder="e.g. 7788 or MySecretPass" style="max-width:320px;">
+            </div>
+
+            <button class="btn-primary" id="btnSecPageSave" style="align-self: flex-start; padding: 10px 22px;">Save Security Settings</button>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 6: DEDICATED SPEED TEST & NETWORK MONITOR -->
+      <!-- ============================================== -->
+      <div id="pageSpeedTest" class="page-container" style="display:none; padding: 0 28px 24px; flex-direction:column; gap:20px; overflow-y:auto;">
+        
+        <!-- Top Header -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800;">Network Speed & Bandwidth Suite</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Monitor real-time interface throughput and benchmark internet bandwidth against CDN edge nodes.</p>
+          </div>
+
+          <!-- Top Tab Switcher (Live Monitor vs Internet Speed Test) -->
+          <div class="speedtest-tabs">
+            <button class="st-tab-btn active" id="btnStTabLive">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              <span>Live Monitor</span>
+            </button>
+            <button class="st-tab-btn" id="btnStTabInternet">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              <span>Internet Benchmark</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Offline Alert Banner (Shown when no internet connection is detected) -->
+        <div id="stOfflineBanner" class="st-alert-banner" style="display:none;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="st-alert-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+            </div>
+            <div>
+              <div style="font-weight:700; font-size:14px; color:#fff;">No Internet Connection Detected</div>
+              <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">
+                The Internet Speed Benchmark requires an active WAN internet connection. Local offline file sharing remains 100% active.
+              </div>
+            </div>
+          </div>
+          <button class="btn-secondary" id="btnStRetryInternet" style="padding:6px 14px; font-size:12px; white-space:nowrap;">Check Again</button>
+        </div>
+
+        <!-- SUB-VIEW A: LIVE MONITOR -->
+        <div id="stLiveSection" style="display:flex; flex-direction:column; gap:16px;">
+          <!-- Top 3 Metrics Cards (Download, Upload, Ping) -->
+          <div class="stat-cards-row">
+            <!-- Live Download Card -->
+            <div class="chart-card" style="padding:18px 20px; border-left: 3px solid var(--card-cyan);">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Live Download</div>
+                  <div style="font-size:26px; font-weight:900; color:var(--card-cyan); margin-top:4px;" id="stLiveDlVal">0.00 Mbps</div>
+                  <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;" id="stLiveDlBytes">0 B/s</div>
+                </div>
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(56, 189, 248, 0.12); color:var(--card-cyan); display:flex; align-items:center; justify-content:center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Upload Card -->
+            <div class="chart-card" style="padding:18px 20px; border-left: 3px solid var(--card-purple);">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Live Upload</div>
+                  <div style="font-size:26px; font-weight:900; color:var(--card-purple); margin-top:4px;" id="stLiveUlVal">0.00 Mbps</div>
+                  <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;" id="stLiveUlBytes">0 B/s</div>
+                </div>
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(192, 132, 252, 0.12); color:var(--card-purple); display:flex; align-items:center; justify-content:center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Ping Card -->
+            <div class="chart-card" style="padding:18px 20px; border-left: 3px solid var(--card-yellow);">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Latency / Ping</div>
+                  <div style="font-size:26px; font-weight:900; color:var(--card-yellow); margin-top:4px;" id="stLivePingVal">-- ms</div>
+                  <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;" id="stLiveIface">Interface: enp37s0</div>
+                </div>
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(253, 224, 71, 0.12); color:var(--card-yellow); display:flex; align-items:center; justify-content:center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Speed Graph & Circular Gauges Container -->
+          <div class="chart-card" style="padding:22px 24px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+              <div>
+                <div style="font-size:15px; font-weight:700;">Live Interface Throughput</div>
+                <div style="font-size:12px; color:var(--text-muted);">Real-time stream from Linux /proc/net/dev</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="chart-legend" style="margin:0;">
+                  <div class="legend-item">
+                    <div class="legend-dot" style="background:var(--card-cyan); box-shadow:0 0 8px var(--card-cyan);"></div>
+                    <span>Download (<span id="stGraphLegendDl">0 Mbps</span>)</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-dot" style="background:var(--card-purple); box-shadow:0 0 8px var(--card-purple);"></div>
+                    <span>Upload (<span id="stGraphLegendUl">0 Mbps</span>)</span>
+                  </div>
+                </div>
+                <button class="btn-secondary" id="btnStToggleLive" style="padding:6px 14px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="stLivePlayPauseIcon"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                  <span id="stLivePlayPauseLabel">Pause</span>
+                </button>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 200px 1fr; gap:20px; align-items:center;">
+              <!-- Speed Dial Gauge -->
+              <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;">
+                <div style="position:relative; width:180px; height:180px;">
+                  <canvas id="stLiveGaugeCanvas" width="180" height="180"></canvas>
+                  <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                    <div style="font-size:22px; font-weight:900; color:#fff;" id="stGaugeSpeedText">0.0</div>
+                    <div style="font-size:11px; font-weight:700; color:var(--card-cyan); text-transform:uppercase;">Mbps DL</div>
+                  </div>
+                </div>
+                <div style="font-size:12px; color:var(--text-muted); font-weight:600;" id="stLivePeakText">Peak: 0.00 Mbps</div>
+              </div>
+
+              <!-- Real-Time Rolling Line Chart -->
+              <div style="height:210px; position:relative; width:100%;">
+                <canvas id="stLiveGraphCanvas" style="width:100%; height:100%; display:block;"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW B: INTERNET BENCHMARK -->
+        <div id="stInternetSection" style="display:none; flex-direction:column; gap:20px;">
+          <!-- Benchmark Action Card -->
+          <div class="chart-card" style="padding:32px; text-align:center; position:relative; overflow:hidden;">
+            <!-- Idle State -->
+            <div id="stBenchIdleView">
+              <div class="st-go-btn-container">
+                <button class="st-go-btn" id="btnStStartBenchmark">
+                  <span class="st-go-btn-glow"></span>
+                  <span class="st-go-btn-text">START</span>
+                  <span class="st-go-btn-sub">TEST</span>
+                </button>
+              </div>
+              <div style="font-size:17px; font-weight:800; color:#fff; margin-top:22px;">Cloudflare Global CDN Speed Benchmark</div>
+              <div style="font-size:13px; color:var(--text-secondary); max-width:480px; margin:8px auto 0; line-height:1.4;">
+                Measures ultra-low latency, multi-stream download bandwidth, and saturated upload throughput against edge CDN nodes.
+              </div>
+            </div>
+
+            <!-- Testing State -->
+            <div id="stBenchActiveView" style="display:none;">
+              <div style="display:flex; justify-content:center; align-items:center; gap:24px; margin-bottom:24px;">
+                <div class="st-step" id="stStepPing">
+                  <div class="st-step-badge">1</div>
+                  <span>Latency</span>
+                </div>
+                <div class="st-step-line"></div>
+                <div class="st-step" id="stStepDl">
+                  <div class="st-step-badge">2</div>
+                  <span>Download</span>
+                </div>
+                <div class="st-step-line"></div>
+                <div class="st-step" id="stStepUl">
+                  <div class="st-step-badge">3</div>
+                  <span>Upload</span>
+                </div>
+              </div>
+
+              <!-- Large Speedometer -->
+              <div style="position:relative; width:220px; height:220px; margin:0 auto 16px;">
+                <canvas id="stBenchGaugeCanvas" width="220" height="220"></canvas>
+                <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                  <div style="font-size:36px; font-weight:900; color:#fff;" id="stBenchCurrentSpeed">0.0</div>
+                  <div style="font-size:12px; font-weight:800; color:var(--card-lime); text-transform:uppercase; letter-spacing:1px;" id="stBenchCurrentPhase">DOWNLOAD</div>
+                </div>
+              </div>
+
+              <div style="font-size:14px; font-weight:600; color:var(--text-secondary);" id="stBenchStatusText">Testing Download...</div>
+              
+              <div style="margin-top:20px;">
+                <button class="btn-secondary" id="btnStCancelBenchmark" style="padding:8px 24px; font-size:13px; border-color:rgba(251,113,133,0.4); color:var(--accent-rose);">
+                  Cancel Test
+                </button>
+              </div>
+            </div>
+
+            <!-- Results State -->
+            <div id="stBenchResultsView" style="display:none;">
+              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(190,242,100,0.15); color:var(--card-lime); padding:4px 14px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:14px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Benchmark Complete</span>
+              </div>
+              <h3 style="font-size:22px; font-weight:800;">Your Internet Speed Results</h3>
+              
+              <div class="st-results-grid" style="margin:24px auto; max-width:620px;">
+                <div class="st-result-box">
+                  <div class="st-result-label">Ping / Latency</div>
+                  <div class="st-result-val" style="color:var(--card-yellow);" id="stResPing">12 ms</div>
+                </div>
+                <div class="st-result-box">
+                  <div class="st-result-label">Download Speed</div>
+                  <div class="st-result-val" style="color:var(--card-cyan);" id="stResDl">84.2 Mbps</div>
+                </div>
+                <div class="st-result-box">
+                  <div class="st-result-label">Upload Speed</div>
+                  <div class="st-result-val" style="color:var(--card-purple);" id="stResUl">32.6 Mbps</div>
+                </div>
+              </div>
+
+              <button class="btn-primary" id="btnStRetest" style="padding:10px 28px; font-size:14px;">Run Test Again</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW: UNIVERSAL WEB MEDIA & VIDEO DOWNLOADER   -->
+      <!-- ============================================== -->
+      <div id="pageDownloader" class="page-container" style="display:none; padding: 0 28px 24px; flex-direction:column; gap:20px; overflow-y:auto;">
+        
+        <!-- Header -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800; display:flex; align-items:center; gap:10px;">
+              <span>Media Downloader</span>
+              <span class="engine-status-pill" id="downloaderEngineBadge">Media Engine • Ready</span>
+            </h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+              Download YouTube, Facebook, TikTok, Instagram, Twitter, and direct media to stream across your local Wi-Fi instantly.
+            </p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" id="btnUpdateDownloaderEngine" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+              <span>Update Engine</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- URL Input Card -->
+        <div class="info-card" style="padding: 22px;">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Enter Video or Media Link</div>
+          <div class="dl-input-row">
+            <div class="dl-input-wrapper">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <input type="text" id="dlUrlInput" class="dl-url-input" placeholder="Paste YouTube, Facebook, TikTok, Twitter/X, or direct media URL (https://...)" autocomplete="off" spellcheck="false" />
+              <button class="dl-paste-btn" id="btnDlPasteUrl" title="Paste from clipboard">Paste</button>
+            </div>
+            <button class="btn-primary" id="btnDlInspect" style="padding: 10px 22px; font-weight: 700; display:inline-flex; align-items:center; gap:8px;">
+              <span id="dlInspectSpinner" class="spinner-small" style="display:none;"></span>
+              <span id="dlInspectBtnText">Inspect Link</span>
+            </button>
+          </div>
+
+          <!-- Platform Tags Hint -->
+          <div class="dl-platform-tags">
+            <span class="dl-tag">YouTube</span>
+            <span class="dl-tag">Facebook</span>
+            <span class="dl-tag">Instagram Reels</span>
+            <span class="dl-tag">TikTok</span>
+            <span class="dl-tag">Twitter / X</span>
+            <span class="dl-tag">Direct .mp4 / .zip</span>
+            <span class="dl-tag-more">+ 2,000 sites</span>
+          </div>
+        </div>
+
+        <!-- Video Metadata Preview Card (Hidden until link inspected) -->
+        <div class="info-card" id="dlPreviewCard" style="display:none; padding: 22px; animation: fadeIn 0.25s ease;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="font-size: 14px; font-weight: 700; color: var(--card-yellow);">Media Preview & Download Options</div>
+            <button class="btn-secondary" id="btnDlClosePreview" style="padding:4px 10px; font-size:11px;">✕ Dismiss</button>
+          </div>
+
+          <div class="dl-preview-content">
+            <!-- Thumbnail Box -->
+            <div class="dl-thumb-box" id="dlThumbBox">
+              <img id="dlPreviewThumb" src="" alt="Thumbnail" />
+              <div class="dl-duration-badge" id="dlPreviewDuration">0:00</div>
+            </div>
+
+            <!-- Video Info & Options -->
+            <div class="dl-details-col">
+              <div class="dl-preview-title" id="dlPreviewTitle">Video Title</div>
+              <div class="dl-preview-meta">
+                <span id="dlPreviewUploader" style="color:var(--text-muted);">Creator</span> • 
+                <span id="dlPreviewExtractor" class="badge-mini">YouTube</span>
+              </div>
+
+              <!-- Quality Presets -->
+              <div style="margin-top: 14px;">
+                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">Select Download Format:</div>
+                <div class="dl-presets-grid">
+                  <label class="dl-preset-option">
+                    <input type="radio" name="dlQualityPreset" value="best" checked />
+                    <div class="dl-preset-card">
+                      <div class="dl-preset-icon">🎬</div>
+                      <div>
+                        <div class="dl-preset-title">Best Video Quality</div>
+                        <div class="dl-preset-desc">Full 1080p / 4K MP4 (Merged Audio)</div>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label class="dl-preset-option">
+                    <input type="radio" name="dlQualityPreset" value="720p" />
+                    <div class="dl-preset-card">
+                      <div class="dl-preset-icon">⚡</div>
+                      <div>
+                        <div class="dl-preset-title">Fast Video (720p)</div>
+                        <div class="dl-preset-desc">Standard HD MP4 • Smaller file</div>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label class="dl-preset-option">
+                    <input type="radio" name="dlQualityPreset" value="mp3" />
+                    <div class="dl-preset-card">
+                      <div class="dl-preset-icon">🎵</div>
+                      <div>
+                        <div class="dl-preset-title">Audio Only (MP3)</div>
+                        <div class="dl-preset-desc">High Quality 320kbps MP3 Audio</div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Options Row: Auto-share to LAN toggle -->
+              <div style="margin-top: 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px;">
+                  <input type="checkbox" id="dlAutoShareLAN" checked style="accent-color:var(--card-lime); width:16px; height:16px;" />
+                  <span><strong>Auto-Share to LAN</strong> (Instantly streamable to phones on local Wi-Fi)</span>
+                </label>
+                <button class="btn-primary" id="btnDlStart" style="padding:10px 24px; font-weight:800; font-size:13px; background:var(--card-yellow); color:#000;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>Download & Share to LAN</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Downloads Card -->
+        <div class="info-card" id="dlActiveSection" style="display:none; padding: 20px;">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px; display:flex; align-items:center; justify-content:space-between;">
+            <span>Active Downloads (<span id="dlActiveCount">0</span>)</span>
+          </div>
+          <div id="dlActiveQueue" style="display:flex; flex-direction:column; gap:12px;">
+            <!-- Active download progress items -->
+          </div>
+        </div>
+
+        <!-- Downloaded Media Library / History Card -->
+        <div class="info-card" style="padding: 20px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px;">
+            <div style="font-size: 15px; font-weight: 700;">Completed Downloads & Shared Media (<span id="dlCompletedCount">0</span>)</div>
+            <button class="card-pill-btn" id="btnOpenDownloadsFolder">Open Folder</button>
+          </div>
+          <div id="dlCompletedList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:16px;">No downloaded media yet. Paste a link above to get started.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 7: DEDICATED SETTINGS & PREFERENCES       -->
+      <!-- ============================================== -->
+      <div id="pageSettings" class="page-container" style="display:none; padding: 0 28px 24px; flex-direction:column; gap:20px; overflow-y:auto;">
+        
+        <!-- Header -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800;">Settings & Preferences</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Customize appearance, file transfers, networking, and security.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" id="btnSettingsResetDefaults" style="padding:8px 16px; font-size:12px;">Reset Defaults</button>
+            <button class="btn-primary" id="btnSettingsSaveAll" style="padding:8px 18px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span>Save Changes</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PROFILE & IDENTITY HERO CARD -->
+        <div class="settings-profile-card">
+          <div class="settings-profile-left">
+            <div class="settings-avatar-wrap" id="btnOpenAvatarPicker" title="Click to change profile avatar">
+              <div class="settings-avatar-circle" id="settingsAvatarDisplay">JD</div>
+              <div class="settings-avatar-badge">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <input type="text" id="settingProfileName" class="settings-name-input" placeholder="Your Display Name" value="JOHN DOE">
+                <button class="btn-primary" id="btnSaveProfileNameDirect" style="padding:6px 14px; font-size:12px; font-weight:700;">Save Name</button>
+                <span class="settings-badge" id="settingDeviceChip">Linux x64</span>
+              </div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:4px;" id="settingHostSubtitle">
+                Device Name: <span id="settingAliasDisplay" style="color:var(--text-secondary); font-weight:600;">JOHN DOE's PC</span> • Visible to nearby devices
+              </div>
+            </div>
+          </div>
+          <button class="btn-secondary" id="btnChangeAvatarDirect" style="padding:6px 14px; font-size:12px;">Change Avatar</button>
+        </div>
+
+        <!-- RIRDROP CLOUD SYNC CARD (OPTIONAL) -->
+        <div class="settings-cloud-card">
+          <div style="display:flex; align-items:flex-start; gap:14px;">
+            <div class="settings-cloud-icon" id="cloudSyncStatusIcon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <h4 style="font-size:15px; font-weight:700;" id="cloudSyncTitle">Offline Guest Mode (Local Storage Only)</h4>
+                <span class="badge-status badge-offline" id="cloudSyncBadge">Offline</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-secondary); margin-top:4px; max-width:620px; line-height:1.4;" id="cloudSyncDesc">
+                Sign in to securely sync your preferences, display name, and trusted devices across all your connected devices. Cloud sync is 100% optional—local file transfers work completely offline.
+              </p>
+              <div id="cloudUserEmailRow" style="display:none; margin-top:6px; font-size:12px; color:var(--card-lime); font-family:monospace;">
+                Logged in as: <span id="cloudUserEmail"></span> • Last synced: <span id="cloudLastSyncTime">Just now</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding-left:48px;" id="cloudSyncActions">
+            <button class="btn-primary" id="btnOpenAuthModal" style="padding:7px 16px; font-size:12px;">Sign In / Register</button>
+            <button class="btn-secondary" id="btnSyncNowCloud" style="display:none; padding:7px 14px; font-size:12px;">Sync Now</button>
+            <button class="btn-secondary" id="btnSignOutCloud" style="display:none; padding:7px 14px; font-size:12px; color:var(--accent-rose); border-color:rgba(251,113,133,0.3);">Sign Out</button>
+          </div>
+        </div>
+
+        <!-- SETTINGS CATEGORY FILTER & ACCORDION TOOLBAR -->
+        <div class="settings-nav-bar">
+          <div class="settings-chips-group">
+            <button class="settings-nav-chip active" data-filter="all" title="Show all settings categories">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>All Categories</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionTheme" title="Jump to Appearance & Themes">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/></svg>
+              <span>Theme</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionTransfers" title="Jump to Transfer Settings">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
+              <span>Transfers</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionNetwork" title="Jump to Network & Discovery">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              <span>Network</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionSecurity" title="Jump to Security & PIN">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Security</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionNotifications" title="Jump to Sounds & Alerts">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+              <span>Sounds</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionStorage" title="Jump to Storage & Cache">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>Storage</span>
+            </button>
+            <button class="settings-nav-chip" data-filter="sectionAbout" title="Jump to About RirDrop">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span>About</span>
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn-secondary" id="btnToggleAllSections" style="padding:6px 14px; font-size:11px; border-radius:999px; font-weight:600;">
+              Expand All
+            </button>
+          </div>
+        </div>
+
+        <!-- 2-COLUMN SETTINGS SECTIONS -->
+        <div class="settings-grid">
+
+          <!-- SECTION 1: APPEARANCE & THEMES -->
+          <div class="chart-card settings-section" id="sectionTheme" data-category="sectionTheme">
+            <div class="settings-section-header" data-target="sectionTheme" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(190, 242, 100, 0.12); color:var(--card-lime);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">Appearance & Theme</div>
+                  <div class="settings-section-subtitle">Manage UI colors, default dark mode, and visual styles</div>
+                </div>
+              </div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryTheme">Dark Mode</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-rows">
+              <!-- Theme Changer (Dark is default) -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Color Theme</div>
+                  <div class="settings-desc">Choose between Obsidian Dark, Crisp Light, or follow system. (Default: Dark)</div>
+                </div>
+                <div class="theme-selector-group">
+                  <button class="theme-btn active" data-theme-val="dark" id="btnThemeDark" title="Obsidian Dark (Default)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <span>Dark (Default)</span>
+                  </button>
+                  <button class="theme-btn" data-theme-val="light" id="btnThemeLight" title="Light Mode">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <span>Light</span>
+                  </button>
+                  <button class="theme-btn" data-theme-val="system" id="btnThemeSystem" title="Follow System Theme">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    <span>System</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Accent Color Palette -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Vibrant Accent Color</div>
+                  <div class="settings-desc">Highlight buttons, graphs, and badges with your preferred color</div>
+                </div>
+                <div class="accent-palette-picker">
+                  <button class="accent-dot active" data-accent="lime" style="background:#bef264;" title="Neon Lime (Default)"></button>
+                  <button class="accent-dot" data-accent="cyan" style="background:#38bdf8;" title="Sky Cyan"></button>
+                  <button class="accent-dot" data-accent="purple" style="background:#c084fc;" title="Electric Purple"></button>
+                  <button class="accent-dot" data-accent="yellow" style="background:#fde047;" title="Sunset Amber"></button>
+                  <button class="accent-dot" data-accent="rose" style="background:#fb7185;" title="Coral Rose"></button>
+                </div>
+              </div>
+
+              <!-- Smooth Animations -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Interface Animations</div>
+                  <div class="settings-desc">Enable smooth transitions, canvas gauges, and live rate graphs</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingToggleAnimations" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- File Size Display Format -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">File Size Units</div>
+                  <div class="settings-desc">Display sizes in Decimal (MB / GB) or Binary standards (MiB / GiB)</div>
+                </div>
+                <select id="settingUnitFormat" class="settings-select">
+                  <option value="decimal" selected>Decimal (1 MB = 1,000 KB)</option>
+                  <option value="binary">Binary (1 MiB = 1,024 KiB)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: TRANSFER SETTINGS -->
+          <div class="chart-card settings-section" id="sectionTransfers" data-category="sectionTransfers">
+            <div class="settings-section-header" data-target="sectionTransfers" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(56, 189, 248, 0.12); color:var(--card-cyan);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">1. Transfer Settings</div>
+                  <div class="settings-section-subtitle">Controls how files are sent, saved, and received</div>
+                </div>
+              </div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryTransfers">3 Concurrent</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-rows">
+              <!-- Default Download Location -->
+              <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div class="settings-label">Default Download Location</div>
+                    <div class="settings-desc">Folder where incoming files from other phones or PCs will be saved</div>
+                  </div>
+                  <div style="display:flex; gap:6px;">
+                    <button class="btn-secondary" id="btnBrowseDownloadDirSettings" style="padding:6px 12px; font-size:12px;">Browse...</button>
+                    <button class="btn-secondary" id="btnOpenDownloadDirSettings" style="padding:6px 12px; font-size:12px;">Open Folder</button>
+                  </div>
+                </div>
+                <div class="settings-path-display" id="settingDownloadPathDisplay">/home/rir790/Downloads/RirDrop</div>
+              </div>
+
+              <!-- Ask Where to Save Each File -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Ask Where to Save Each File</div>
+                  <div class="settings-desc">Prompt with a file picker dialog before starting each incoming download</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingAskWhereToSave">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Auto Accept Files from Trusted Devices -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Auto-Accept Trusted Devices</div>
+                  <div class="settings-desc">Automatically receive files without asking approval if device was approved before</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingAutoAcceptTrusted" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Overwrite Confirmation -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Overwrite Existing Files Confirmation</div>
+                  <div class="settings-desc">Ask before replacing an existing file with the same name</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingOverwriteConfirm" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Keep Screen Awake -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Keep Screen Awake During Transfers</div>
+                  <div class="settings-desc">Prevent system sleep while files are actively streaming or transferring</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingKeepAwake" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Maximum Simultaneous Transfers -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Maximum Simultaneous Transfers</div>
+                  <div class="settings-desc">Number of files allowed to transfer concurrently</div>
+                </div>
+                <select id="settingMaxConcurrent" class="settings-select">
+                  <option value="1">1 Transfer (Sequential)</option>
+                  <option value="2">2 Transfers</option>
+                  <option value="3" selected>3 Transfers (Balanced)</option>
+                  <option value="5">5 Transfers</option>
+                  <option value="10">10 Transfers (Maximum)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 3: CONNECTION & NETWORK -->
+          <div class="chart-card settings-section" id="sectionNetwork" data-category="sectionNetwork">
+            <div class="settings-section-header" data-target="sectionNetwork" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(192, 132, 252, 0.12); color:var(--card-purple);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">2. Connection & Network</div>
+                  <div class="settings-section-subtitle">Manage local Wi-Fi connectivity and device discovery</div>
+                </div>
+              </div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryNetwork">UDP Active</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-rows">
+              <!-- Connection Method -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Active Connection Method</div>
+                  <div class="settings-desc" id="settingNetworkNicDesc">Ethernet / Wi-Fi Network Interface</div>
+                </div>
+                <span class="badge-status badge-active" id="settingNicBadge">enp37s0 (Active)</span>
+              </div>
+
+              <!-- Device Discovery Toggle -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">LAN Device Discovery (UDP 53317)</div>
+                  <div class="settings-desc">Broadcast your presence so nearby RirDrop devices on Wi-Fi find you</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingDeviceDiscovery" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- IP Address & Port -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Device IP & Web Portal Port</div>
+                  <div class="settings-desc" id="settingIpPortDesc">192.168.1.102:53318</div>
+                </div>
+                <button class="btn-secondary" id="btnCopyIpPort" style="padding:6px 12px; font-size:12px;">Copy Address</button>
+              </div>
+
+              <!-- Connection Timeout -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Connection Inactivity Timeout</div>
+                  <div class="settings-desc">Automatically drop idle peer sessions to conserve resources</div>
+                </div>
+                <select id="settingConnTimeout" class="settings-select">
+                  <option value="15">15 Seconds</option>
+                  <option value="30" selected>30 Seconds (Recommended)</option>
+                  <option value="60">60 Seconds</option>
+                  <option value="0">Never Timeout</option>
+                </select>
+              </div>
+
+              <!-- Reconnect Automatically -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Reconnect Automatically</div>
+                  <div class="settings-desc">Resume broken transfers and reconnect to known peers if Wi-Fi blips</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingAutoReconnect" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Network Diagnostics -->
+              <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div class="settings-label">Network Diagnostics</div>
+                    <div class="settings-desc">Test socket health, local loopback, and broadcast reachability</div>
+                  </div>
+                  <button class="btn-secondary" id="btnRunDiagnostics" style="padding:6px 14px; font-size:12px;">Run Diagnostics</button>
+                </div>
+                <div id="diagnosticsOutputBox" class="diagnostics-box" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 4: PRIVACY & SECURITY -->
+          <div class="chart-card settings-section" id="sectionSecurity" data-category="sectionSecurity">
+            <div class="settings-section-header" data-target="sectionSecurity" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(253, 224, 71, 0.12); color:var(--card-yellow);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">3. Privacy & Security</div>
+                  <div class="settings-section-subtitle">Give users control over who can connect and download</div>
+                </div>
+              </div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummarySecurity">Approval Required</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-rows">
+              <!-- Require Approval for Incoming -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Require Approval for Incoming Transfers</div>
+                  <div class="settings-desc">Show prompt when a new device requests access or sends files</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingRequireApproval" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Device Visibility -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Device Visibility on the Network</div>
+                  <div class="settings-desc">When disabled, this device acts in Stealth Mode and will not announce on UDP</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingDeviceVisibility" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Transfer Authentication / Master PIN -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Transfer PIN Authentication</div>
+                  <div class="settings-desc">Require entering a 4-digit PIN or master password on connecting phones</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="text" id="settingPinInput" class="modal-input" placeholder="e.g. 7788" style="width:110px; margin-bottom:0; font-family:monospace; text-align:center;">
+                  <button class="btn-secondary" id="btnSavePin" style="padding:6px 12px; font-size:12px;">Save PIN</button>
+                </div>
+              </div>
+
+              <!-- Automatically Stop Sharing When Disconnected -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Auto-Stop Sharing on Disconnect</div>
+                  <div class="settings-desc">Immediately pause server endpoints when Wi-Fi or LAN cable is unplugged</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingAutoStopSharing" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Trusted Devices Management -->
+              <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:10px;">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div class="settings-label">Trusted Devices Management</div>
+                    <div class="settings-desc">Devices you have authorized to connect without repeated prompts</div>
+                  </div>
+                  <button class="btn-secondary" id="btnClearTrustedDevices" style="padding:6px 12px; font-size:12px; color:var(--accent-rose); border-color:rgba(251,113,133,0.3);">Clear All Trusted Devices</button>
+                </div>
+                <div id="settingsTrustedDevicesList" class="settings-trusted-list">
+                  <!-- Injected authorized devices list -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 5: NOTIFICATIONS & SOUNDS -->
+          <div class="chart-card settings-section" id="sectionNotifications" data-category="sectionNotifications">
+            <div class="settings-section-header" data-target="sectionNotifications" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(251, 113, 133, 0.12); color:var(--accent-rose);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">4. Notifications & Sound</div>
+                  <div class="settings-section-subtitle">Control desktop alerts and audio feedback</div>
+                </div>
+              </div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryNotifications">Audio Enabled</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-rows">
+              <!-- Transfer Started Notification -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Transfer Started Alert</div>
+                  <div class="settings-desc">Show desktop notification banner when an incoming file transfer begins</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingNotifStarted" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Transfer Completed Notification -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Transfer Completed Alert</div>
+                  <div class="settings-desc">Notify with file name and size when download finishes</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingNotifCompleted" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Transfer Failed Notification -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Transfer Failed Alert</div>
+                  <div class="settings-desc">Warn if a transfer is interrupted by network drop</div>
+                </div>
+                <label class="switch-label">
+                  <input type="checkbox" id="settingNotifFailed" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <!-- Sound Effects -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Sound Effects (Audio Chime)</div>
+                  <div class="settings-desc">Play soft acoustic chimes upon successful transfers</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <button class="btn-secondary" id="btnTestSound" style="padding:6px 12px; font-size:12px;">Test Chime</button>
+                  <label class="switch-label">
+                    <input type="checkbox" id="settingSoundEffects" checked>
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 6: STORAGE & DATA MANAGEMENT -->
+          <div class="chart-card settings-section" id="sectionStorage" data-category="sectionStorage">
+            <div class="settings-section-header" data-target="sectionStorage" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(56, 189, 248, 0.12); color:var(--card-cyan);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">5. Storage & Data</div>
+                  <div class="settings-section-subtitle">Manage stored files, temp chunks, and app cache</div>
+                </div>
+              </div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryStorage">Clean Cache</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-rows">
+              <!-- Storage Metrics -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Storage Used by Received Files</div>
+                  <div class="settings-desc" id="settingDownloadDirSizeText">Calculating...</div>
+                </div>
+                <button class="btn-secondary" id="btnOpenReceivedFolder" style="padding:6px 14px; font-size:12px;">Open Received Folder</button>
+              </div>
+
+              <!-- Cache Size -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Thumbnail & Stream Cache</div>
+                  <div class="settings-desc" id="settingCacheSizeText">0 B</div>
+                </div>
+                <button class="btn-secondary" id="btnClearCacheBtn" style="padding:6px 14px; font-size:12px;">Clear Cache</button>
+              </div>
+
+              <!-- Clean Temp Files -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Clean Incomplete & Temporary Files</div>
+                  <div class="settings-desc">Purge any unfinished partial transfers from disk</div>
+                </div>
+                <button class="btn-secondary" id="btnCleanTempFiles" style="padding:6px 14px; font-size:12px;">Clean Temp Files</button>
+              </div>
+
+              <!-- Clear Transfer History -->
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Clear Transfer History</div>
+                  <div class="settings-desc">Wipe recent sent/received transfer log from UI</div>
+                </div>
+                <button class="btn-secondary" id="btnClearHistoryBtn" style="padding:6px 14px; font-size:12px; color:var(--accent-rose); border-color:rgba(251,113,133,0.3);">Clear History</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 7: ABOUT RIRDROP -->
+          <div class="chart-card settings-section" id="sectionAbout" data-category="sectionAbout" style="grid-column: 1 / -1;">
+            <div class="settings-section-header" data-target="sectionAbout" title="Click to minimize or expand">
+              <div class="settings-section-header-left">
+                <div class="settings-section-icon" style="background:rgba(190, 242, 100, 0.12); color:var(--card-lime);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div>
+                  <div class="settings-section-title">6. About RirDrop</div>
+                  <div class="settings-section-subtitle">Version info, open source licenses, and update management</div>
+                </div>
+              </div>
+              <div class="settings-section-header-right">
+                <span class="settings-summary-chip" id="chipSummaryAbout">v1.0.0 • Up to date</span>
+                <div class="settings-chevron-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-rows">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">RirDrop Desktop Version</div>
+                  <div class="settings-desc" id="settingsCurrentVersionText">v1.0.0 Stable (Electron • Node.js • Linux x64)</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span id="settingsUpdateBadge" style="display:none; font-size:11px; padding:3px 9px; border-radius:12px; font-weight:700; background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.3);">UPDATE AVAILABLE</span>
+                  <button class="btn-secondary" id="btnCheckUpdates" style="padding:6px 14px; font-size:12px;">Check for Updates</button>
+                </div>
+              </div>
+
+              <!-- In-Settings Update Information & Download Card (Visible if update found) -->
+              <div id="settingsUpdateCard" style="display:none; background:rgba(99, 102, 241, 0.08); border:1px solid rgba(99, 102, 241, 0.25); border-radius:10px; padding:16px; margin: 4px 0 12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="background:rgba(16,185,129,0.15); color:#34d399; font-weight:700; font-family:monospace; padding:3px 8px; border-radius:6px; font-size:12px;" id="settingsAvailableVersionTag">v1.1.0</span>
+                    <strong style="color:#fff; font-size:13px;" id="settingsUpdateTitle">New Version Ready</strong>
+                  </div>
+                  <button class="btn-primary" id="btnSettingsDownloadUpdate" style="padding:6px 16px; font-size:11px; background:linear-gradient(135deg, #6366f1, #8b5cf6);">
+                    Download Update
+                  </button>
+                </div>
+                <div style="font-size:12px; color:#cbd5e1; font-family:monospace; white-space:pre-wrap; max-height:100px; overflow-y:auto; background:var(--bg-app); border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:10px;" id="settingsUpdateChangelog">
+                  Loading notes...
+                </div>
+                <div style="font-size:11px; color:var(--text-secondary); display:flex; gap:14px; flex-wrap:wrap;" id="settingsPlatformLinksRow">
+                  <!-- Platform links will be populated dynamically -->
+                </div>
+              </div>
+
+              <div class="settings-row" style="display:flex; flex-wrap:wrap; gap:12px; justify-content:flex-start;">
+                <button class="btn-secondary" id="btnViewLicenses" style="padding:8px 16px; font-size:12px;">Open Source Licenses</button>
+                <button class="btn-secondary" id="btnViewPrivacy" style="padding:8px 16px; font-size:12px;">Privacy Policy</button>
+                <button class="btn-secondary" id="btnViewTroubleshooting" style="padding:8px 16px; font-size:12px;">Help & Troubleshooting</button>
+                <button class="btn-secondary" id="btnReportProblem" style="padding:8px 16px; font-size:12px;">Report an Issue</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- QR Code & Portal Modal (When clicking "Connect Phone (QR)") -->
+  <div class="app-modal-overlay" id="portalModal" style="display:none;">
+    <div class="app-modal-card" style="text-align:center; max-width:440px; padding:28px 24px;">
+      <div class="modal-title-row">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--card-yellow);"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+          <h3 style="font-size: 18px; font-weight: 800;">Scan to Connect Phone</h3>
+        </div>
+        <button id="btnClosePortalModal" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+        Connect your phone to the same Wi-Fi network and scan:
+      </p>
+
+      <div style="background:#fff; padding:16px; border-radius:20px; display:inline-block; margin-bottom:16px; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
+        <img id="qrCodeImage" src="" alt="QR Code" style="width:210px; height:210px; display:block;">
+      </div>
+
+      <div style="background:var(--bg-app); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-family:monospace; font-size:14px; color:var(--card-yellow); font-weight:700; margin-bottom:16px;" id="portalModalUrlText">
+        http://192.168.1.102:53318
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:10px 14px; text-align:left; font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:18px;">
+        <div>1. Phone and PC must be on same Wi-Fi (or phone hotspot).</div>
+        <div>2. Open phone camera or browser and open the link.</div>
+        <div>3. When prompted on PC, click <b>Accept</b> to start streaming!</div>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button class="btn-secondary" id="btnCopyPortalUrl" style="padding:10px 18px; display:inline-flex; align-items:center; gap:6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span id="copyPortalBtnLabel">Copy Link</span>
+        </button>
+        <button class="btn-primary" id="btnOpenBrowserDirect" style="padding:10px 18px;">Open in Browser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal (When clicking "Settings" in sidebar) -->
+  <div class="app-modal-overlay" id="settingsModal" style="display:none;">
+    <div class="app-modal-card" style="max-width:520px;">
+      <div class="modal-title-row">
+        <h3 style="font-size: 18px; font-weight: 700;">RirDrop Settings</h3>
+        <button id="btnCloseSettingsModal" style="background:transparent; border:none; color:#fff; font-size:16px; cursor:pointer;">✕</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
+        <div>
+          <label style="font-size: 12px; color:var(--text-muted); display:block; margin-bottom:6px;">Device Alias (Visible on LAN):</label>
+          <input type="text" id="settingDeviceAlias" class="modal-input" placeholder="e.g. My Linux PC">
+        </div>
+
+        <div>
+          <label style="font-size: 12px; color:var(--text-muted); display:block; margin-bottom:6px;">Downloads Save Directory (Received Files):</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="settingDownloadDir" class="modal-input" readonly style="margin-bottom:0;">
+            <button class="btn-secondary" id="btnBrowseDownloadDir" style="white-space:nowrap;">Change</button>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card-secondary); border:1px solid var(--border); border-radius:12px; padding:12px; font-size:12px; line-height:1.5; color:var(--text-secondary);">
+          <b style="color:#fff;">Direct Hotspot Mode:</b><br>
+          If you don't have a Wi-Fi router, simply turn on your Android or PC Hotspot, connect the devices to it, and RirDrop will stream and share files at maximum 802.11 speed with zero internet data.
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-primary" id="btnSaveSettings">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Security Modal (from card) -->
+  <div class="app-modal-overlay" id="securityModal" style="display:none;">
+    <div class="app-modal-card">
+      <div class="modal-title-row">
+        <h3 style="font-size: 18px; font-weight: 700;">Security & Access Control</h3>
+        <button id="btnCloseSecurityModal" style="background:transparent; border:none; color:#fff; font-size:16px; cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+        Control who can browse your storage and download files across the local Wi-Fi.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+        <label style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600;">
+          <span>Require Device Authorization</span>
+          <input type="checkbox" id="checkRequireAuth" checked style="width: 18px; height: 18px; accent-color: var(--card-lime);">
+        </label>
+
+        <label style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600;">
+          <span>Require Master Password</span>
+          <input type="checkbox" id="checkEnablePassword" style="width: 18px; height: 18px; accent-color: var(--card-lime);">
+        </label>
+      </div>
+
+      <div id="passwordInputGroup" style="display: none;">
+        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">Set Access Password / PIN:</label>
+        <input type="text" id="inputMasterPassword" class="modal-input" placeholder="e.g. 8899 or SecretPass">
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-secondary" id="btnCancelSecurity">Cancel</button>
+        <button class="btn-primary" id="btnSaveSecurity">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-App Media Player Modal (Video / Audio / Image) -->
+  <div class="app-modal-overlay" id="mediaPreviewModal" style="display:none; padding:16px;">
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:20px; width:100%; max-width:900px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.8);">
+      <div style="padding:16px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border);">
+        <div style="font-weight:700; font-size:15px;" id="mediaPreviewTitle">Preview</div>
+        <button id="btnCloseMediaPreview" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+      <div id="mediaPreviewViewport" style="flex:1; display:flex; align-items:center; justify-content:center; padding:16px; background:#000; overflow:hidden;">
+        <!-- Injected media player -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Incoming Device Authorization Modal (Pops up directly when phone connects!) -->
+  <div class="app-modal-overlay" id="incomingApprovalModal" style="display:none; z-index: 2000;">
+    <div class="app-modal-card" style="text-align:center; max-width:440px; border:2px solid var(--card-yellow); box-shadow:0 0 50px rgba(253, 224, 71, 0.25);">
+      <div style="width:64px; height:64px; border-radius:18px; background:rgba(253, 224, 71, 0.15); color:var(--card-yellow); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; border:1px solid rgba(253, 224, 71, 0.3);">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+      </div>
+      <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">New Connection Request</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+        A device is asking to connect and access your shared files:
+      </p>
+
+      <div style="background:var(--bg-app); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:24px; text-align:left;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-size:12px; color:var(--text-muted);">Device Name:</span>
+          <span style="font-size:14px; font-weight:700; color:#fff;" id="incomingDevName">Android Device</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-size:12px; color:var(--text-muted);">IP Address:</span>
+          <span style="font-size:13px; font-family:monospace; color:var(--card-yellow);" id="incomingDevIp">192.168.1.x</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="font-size:12px; color:var(--text-muted);">Platform / OS:</span>
+          <span style="font-size:13px; font-weight:600; color:var(--card-lime);" id="incomingDevOs">Android</span>
+        </div>
+      </div>
+
+      <!-- Accept & Reject Buttons - Clean vector SVG icons, ZERO clunky emojis -->
+      <div style="display:flex; gap:12px;">
+        <button class="btn-secondary" id="btnRejectIncoming" style="flex:1; padding:12px; border-color:rgba(251, 113, 133, 0.4); color:var(--accent-rose); font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <span>Reject</span>
+        </button>
+        <button class="btn-primary" id="btnAcceptIncoming" style="flex:1; padding:12px; font-size:15px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Accept</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RirDrop Cloud Sync & Authentication Modal -->
+  <div class="app-modal-overlay" id="cloudAuthModal" style="display:none; z-index: 2100;">
+    <div class="app-modal-card" style="max-width: 440px; padding: 28px 24px;">
+      <div class="modal-title-row">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:32px; height:32px; border-radius:8px; background:rgba(190,242,100,0.15); color:var(--card-lime); display:flex; align-items:center; justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+          </div>
+          <h3 style="font-size: 18px; font-weight: 800;" id="authModalTitle">Sign In to Cloud Sync</h3>
+        </div>
+        <button id="btnCloseAuthModal" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+
+      <!-- Auth Mode Switch Tabs -->
+      <div class="speedtest-tabs" style="margin: 16px 0 20px; justify-content:stretch;">
+        <button class="st-tab-btn active" id="btnAuthTabSignIn" style="flex:1; justify-content:center;">Sign In</button>
+        <button class="st-tab-btn" id="btnAuthTabSignUp" style="flex:1; justify-content:center;">Create Account</button>
+      </div>
+
+      <!-- Alert / Status message -->
+      <div id="authAlertBox" style="display:none; padding:10px 14px; border-radius:10px; font-size:12px; margin-bottom:16px;"></div>
+
+      <div style="display:flex; flex-direction:column; gap:14px; text-align:left;">
+        <div id="authNameGroup" style="display:none;">
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Display Name:</label>
+          <input type="text" id="authInputName" class="modal-input" placeholder="e.g. Alex" style="margin-bottom:0;">
+        </div>
+
+        <div>
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Email Address:</label>
+          <input type="email" id="authInputEmail" class="modal-input" placeholder="name@example.com" style="margin-bottom:0;">
+        </div>
+
+        <div>
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Password:</label>
+          <input type="password" id="authInputPassword" class="modal-input" placeholder="••••••••" style="margin-bottom:0;">
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
+        <button class="btn-primary" id="btnAuthSubmit" style="padding:12px; font-size:14px; font-weight:700; width:100%;">
+          Sign In
+        </button>
+        <button class="btn-secondary" id="btnAuthGuest" style="padding:10px; font-size:13px; width:100%;">
+          Continue Offline (Guest Mode)
+        </button>
+      </div>
+      
+      <p style="font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.4; text-align:center;">
+        Cloud Sync stores your preferences & trusted devices securely. Your shared files always transfer directly peer-to-peer over local Wi-Fi and never go through the cloud.
+      </p>
+    </div>
+  </div>
+
+  <!-- Quick Display Name Edit Modal -->
+  <div class="app-modal-overlay" id="nameEditModal" style="display:none; z-index: 2200;">
+    <div class="app-modal-card" style="max-width: 400px; padding: 24px;">
+      <div class="modal-title-row">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:32px; height:32px; border-radius:8px; background:rgba(253,224,71,0.15); color:var(--card-yellow); display:flex; align-items:center; justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
+          <h3 style="font-size: 17px; font-weight: 800;">Change Display Name</h3>
+        </div>
+        <button id="btnCloseNameModal" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 16px;">
+        This name will be displayed across your local Wi-Fi when streaming or sharing files.
+      </p>
+      <div>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Your Name:</label>
+        <input type="text" id="quickNameInput" class="modal-input" placeholder="e.g. JOHN DOE" value="JOHN DOE" style="margin-bottom:16px;">
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="btn-secondary" id="btnCancelQuickName" style="padding:8px 16px; font-size:12px;">Cancel</button>
+        <button class="btn-primary" id="btnSaveQuickName" style="padding:8px 20px; font-size:12px; font-weight:700;">Save Name</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Avatar Picker Modal -->
+  <div class="app-modal-overlay" id="avatarPickerModal" style="display:none; z-index: 2100;">
+    <div class="app-modal-card" style="max-width: 480px; padding: 26px 24px;">
+      <div class="modal-title-row">
+        <h3 style="font-size: 18px; font-weight: 800;">Choose Profile Avatar</h3>
+        <button id="btnCloseAvatarModal" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 18px;">
+        Select an avatar or upload an image to personalize your device on the network.
+      </p>
+
+      <div class="avatar-grid" id="avatarGridList">
+        <!-- Injected Avatar Choices -->
+      </div>
+
+      <div style="margin-top: 20px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:16px;">
+        <label class="btn-secondary" style="padding:8px 16px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Upload Image...</span>
+          <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+        </label>
+        <button class="btn-primary" id="btnConfirmAvatar" style="padding:8px 20px; font-size:12px;">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic Info / Dialog Modal (Licenses, Privacy, Troubleshooting, Updates) -->
+  <div class="app-modal-overlay" id="infoModal" style="display:none; z-index: 2200;">
+    <div class="app-modal-card" style="max-width: 620px; max-height: 82vh; display:flex; flex-direction:column; padding: 24px;">
+      <div class="modal-title-row" style="margin-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:30px; height:30px; border-radius:8px; background:rgba(190,242,100,0.15); color:var(--card-lime); display:flex; align-items:center; justify-content:center;" id="infoModalIcon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </div>
+          <h3 style="font-size: 18px; font-weight: 800;" id="infoModalTitle">Information</h3>
+        </div>
+        <button id="btnCloseInfoModal" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+      <div id="infoModalContent" style="flex:1; overflow-y:auto; font-size:13px; line-height:1.6; color:var(--text-secondary); text-align:left; padding-right:8px;">
+        <!-- Injected content -->
+      </div>
+      <div style="margin-top: 18px; display:flex; justify-content:flex-end;">
+        <button class="btn-primary" id="btnOkInfoModal" style="padding:8px 22px; font-size:13px;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RirDrop Software Update Notification Modal (Dismissible, Never Forces) -->
+  <div class="app-modal-overlay" id="appUpdateModal" style="display:none; z-index: 2300;">
+    <div class="app-modal-card" style="max-width: 500px; padding: 26px 24px; text-align: left; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);">
+      <div class="modal-title-row" style="margin-bottom: 14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.3)); color:#818cf8; display:flex; align-items:center; justify-content:center; border: 1px solid rgba(99,102,241,0.3);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m8 6 4-4 4 4"/><path d="M16 18a4 4 0 0 0-8 0"/></svg>
+          </div>
+          <div>
+            <div style="font-size: 17px; font-weight: 800; color: #fff;" id="updateModalHeading">New Update Available!</div>
+            <div style="font-size: 12px; color: var(--text-secondary);" id="updateModalSubheading">A new version of RirDrop is ready for download.</div>
+          </div>
+        </div>
+        <button id="btnCloseUpdateModal" style="background:transparent; border:none; color:var(--text-secondary); font-size:18px; cursor:pointer;" title="Dismiss">✕</button>
+      </div>
+
+      <!-- Version comparison row -->
+      <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-app); border:1px solid var(--border); border-radius:10px; padding:12px 16px; margin-bottom:14px;">
+        <div>
+          <div style="font-size:11px; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Current</div>
+          <div style="font-size:14px; font-weight:700; font-family:monospace; color:var(--text-secondary);" id="updateCurrentVersionBadge">v1.0.0</div>
+        </div>
+        <div style="color:var(--text-secondary); font-size:16px;">➔</div>
+        <div style="text-align:right;">
+          <div style="font-size:11px; color:#34d399; text-transform:uppercase; font-weight:700;">Available</div>
+          <div style="font-size:15px; font-weight:800; font-family:monospace; color:#34d399;" id="updateNewVersionBadge">v1.1.0</div>
+        </div>
+      </div>
+
+      <!-- Changelog container -->
+      <div style="margin-bottom: 16px;">
+        <div style="font-size:12px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">Release Highlights:</div>
+        <div id="updateChangelogBox" style="background:var(--bg-app); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:12px; color:#cbd5e1; max-height:130px; overflow-y:auto; white-space:pre-wrap; line-height:1.5; font-family:monospace;">
+          • Performance enhancements and stability upgrades.
+        </div>
+      </div>
+
+      <div style="font-size:11px; color:var(--text-secondary); margin-bottom:14px; line-height:1.4;">
+        💡 You can update now or choose "Remind Me Later" to keep working. You can also install this update anytime from <strong>Settings &rarr; About RirDrop</strong>.
+      </div>
+
+      <!-- User Freedom: Non-intrusive action buttons -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <button class="btn-secondary" id="btnRemindMeLater" style="padding:9px 16px; font-size:12px; border-radius:8px;">
+          Remind Me Later
+        </button>
+        <button class="btn-primary" id="btnDownloadUpdateNow" style="padding:9px 20px; font-size:12px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #6366f1, #8b5cf6);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span id="btnDownloadUpdateText">Download Update</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
