@@ -1,7 +1,6 @@
 package com.rirdev.rirdrop
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,25 +9,24 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
-import android.view.View
-import android.webkit.*
-import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
-import com.rirdev.rirdrop.bridge.AndroidBridge
+import androidx.core.view.WindowCompat
 import com.rirdev.rirdrop.network.DiscoveryEngine
 import com.rirdev.rirdrop.network.NetworkUtils
 import com.rirdev.rirdrop.scanner.QrScannerActivity
 import com.rirdev.rirdrop.server.LocalHttpServer
 import com.rirdev.rirdrop.server.SharedItem
-import org.json.JSONArray
-import org.json.JSONObject
+import com.rirdev.rirdrop.ui.RirDropApp
+import com.rirdev.rirdrop.ui.RirDropViewModel
 import java.util.UUID
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var webView: WebView
+    private val viewModel by viewModels<RirDropViewModel>()
     private lateinit var discoveryEngine: DiscoveryEngine
     private var httpServer: LocalHttpServer? = null
     private val deviceName by lazy { NetworkUtils.getDeviceName() }
@@ -39,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             val scannedData = result.data?.getStringExtra("SCANNED_QR")
             if (!scannedData.isNullOrBlank()) {
-                handleScannedQr(scannedData)
+                viewModel.handleScannedQr(scannedData)
             }
         }
     }
@@ -62,33 +60,29 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (pickedItems.isNotEmpty()) {
-                httpServer?.setSharedItems(pickedItems)
-                notifyWebFilesSelected(pickedItems)
+                viewModel.addSharedFiles(pickedItems)
             }
         }
     }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        // Permissions handled
-    }
+    ) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Set modern full-screen immersive dark layout
-        window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        )
-
-        webView = WebView(this)
-        setContentView(webView)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         checkPermissions()
         startEngines()
-        setupWebView()
+
+        setContent {
+            RirDropApp(
+                viewModel = viewModel,
+                onScanQrClicked = { launchQrScanner() },
+                onPickFilesClicked = { launchFilePicker() }
+            )
+        }
     }
 
     private fun checkPermissions() {
@@ -114,91 +108,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startEngines() {
-        // 1. Discovery Engine
+        // 1. Discovery Engine (UDP 53317 with Wifi MulticastLock)
         discoveryEngine = DiscoveryEngine(this, deviceName, 53318) { peers ->
             runOnUiThread {
-                notifyWebPeersUpdated(peers)
+                viewModel.updateDiscoveredPeers(peers)
             }
         }
         discoveryEngine.start()
 
-        // 2. Embedded HTTP Server
+        // 2. Embedded HTTP Server (TCP 53318)
         try {
             httpServer = LocalHttpServer(this, 53318, deviceName).apply {
                 start()
             }
         } catch (_: Exception) {}
-    }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun setupWebView() {
-        val settings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.databaseEnabled = true
-        settings.allowFileAccess = true
-        settings.allowContentAccess = true
-        settings.mediaPlaybackRequiresUserGesture = false
-        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
-
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        webView.setBackgroundColor(0xFF0A0B0E.toInt())
-
-        // Register Native JavaScript Bridge
-        val bridge = AndroidBridge(this, discoveryEngine)
-        webView.addJavascriptInterface(bridge, "AndroidBridge")
-
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                return super.onConsoleMessage(consoleMessage)
-            }
-        }
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                injectAndroidBridgeShim()
-            }
-        }
-
-        webView.loadUrl("file:///android_asset/web/index.html")
-    }
-
-    private fun injectAndroidBridgeShim() {
-        val shimScript = """
-            (function() {
-                if (window.AndroidBridge && !window.rirdropAPI) {
-                    window.rirdropAndroid = window.AndroidBridge;
-                    window.rirdropAPI = {
-                        isAndroid: true,
-                        scanQrCode: function() { window.AndroidBridge.scanQrCode(); },
-                        getHostInfo: function() {
-                            return Promise.resolve(JSON.parse(window.AndroidBridge.getHostInfo()));
-                        },
-                        getPeers: function() {
-                            return Promise.resolve(JSON.parse(window.AndroidBridge.getPeers()));
-                        },
-                        scanNow: function() { window.AndroidBridge.scanNow(); },
-                        pickFiles: function() { window.AndroidBridge.pickFiles(); },
-                        startDownload: function(opts) {
-                            window.AndroidBridge.startDownload(opts.url, opts.fileName || 'download');
-                        },
-                        openDownloadsFolder: function() { window.AndroidBridge.openDownloadsFolder(); },
-                        showToast: function(msg) { window.AndroidBridge.showToast(msg); },
-                        vibrate: function(ms) { window.AndroidBridge.vibrate(ms || 60); },
-                        generateQr: function(text) {
-                            if (window.AndroidBridge && window.AndroidBridge.generateQr) {
-                                return Promise.resolve(window.AndroidBridge.generateQr(text));
-                            }
-                            return Promise.resolve(null);
-                        }
-                    };
-                    console.log('[RirDrop Android] Native bridge injected successfully.');
-                }
-            })();
-        """.trimIndent()
-        webView.evaluateJavascript(shimScript, null)
+        viewModel.attachEngines(discoveryEngine, httpServer)
     }
 
     fun launchQrScanner() {
@@ -213,59 +138,6 @@ class MainActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         }
         filePickerLauncher.launch(intent)
-    }
-
-    private fun handleScannedQr(data: String) {
-        val escaped = JSONObject.quote(data)
-        val js = """
-            if (typeof window.handleScannedQrCode === 'function') {
-                window.handleScannedQrCode($escaped);
-            } else {
-                console.log('Scanned QR:', $escaped);
-                if (window.rirdropAPI && window.rirdropAPI.showToast) {
-                    window.rirdropAPI.showToast('Scanned PC QR Code!');
-                }
-            }
-        """.trimIndent()
-        webView.evaluateJavascript(js, null)
-    }
-
-    private fun notifyWebPeersUpdated(peers: List<com.rirdev.rirdrop.network.PeerDevice>) {
-        val arr = JSONArray()
-        for (p in peers) {
-            arr.put(JSONObject().apply {
-                put("alias", p.alias)
-                put("os", p.os)
-                put("ip", p.ip)
-                put("httpPort", p.httpPort)
-                put("deviceType", p.deviceType)
-                put("lastSeen", p.lastSeen)
-            })
-        }
-        val js = """
-            if (typeof window.onAndroidPeersUpdated === 'function') {
-                window.onAndroidPeersUpdated($arr);
-            }
-        """.trimIndent()
-        webView.evaluateJavascript(js, null)
-    }
-
-    private fun notifyWebFilesSelected(items: List<SharedItem>) {
-        val arr = JSONArray()
-        for (item in items) {
-            arr.put(JSONObject().apply {
-                put("id", item.id)
-                put("name", item.name)
-                put("size", item.size)
-                put("mimeType", item.mimeType)
-            })
-        }
-        val js = """
-            if (typeof window.onAndroidFilesSelected === 'function') {
-                window.onAndroidFilesSelected($arr);
-            }
-        """.trimIndent()
-        webView.evaluateJavascript(js, null)
     }
 
     private fun resolveUriToSharedItem(uri: Uri): SharedItem? {
@@ -290,14 +162,6 @@ class MainActivity : AppCompatActivity() {
             mimeType = mimeType,
             uri = uri
         )
-    }
-
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
     }
 
     override fun onDestroy() {
